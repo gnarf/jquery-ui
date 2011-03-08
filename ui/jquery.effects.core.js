@@ -442,9 +442,10 @@ $.effects.$.fn.extend({
 	},
 
 	setTransition: function( list, factor, value ) {
+		var el = this;
 		value = value || {};
 		$.each( list, function(i, x){
-			unit = this.cssUnit( x );
+			unit = el.cssUnit( x );
 			if ( unit[ 0 ] > 0 ) value[ x ] = unit[ 0 ] * factor + unit[ 1 ];
 		});
 		return value;

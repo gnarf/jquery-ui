@@ -14,20 +14,19 @@
 
 $.effects.effect.highlight = function( o ) {
 	return this.queue( function() {
-		var elem = $( this ),
+		var el = $.effects.$( this ),
 			props = [ 'backgroundImage', 'backgroundColor', 'opacity' ],
-			mode = $.effects.setMode( elem, o.mode || 'show' ),
+			mode = el.setMode( o.mode || 'show' ),
 			animation = {
-				backgroundColor: elem.css( 'backgroundColor' )
+				backgroundColor: el.css( 'backgroundColor' )
 			};
 
 		if (mode == 'hide') {
 			animation.opacity = 0;
 		}
 
-		$.effects.save( elem, props );
-		
-		elem
+		el
+			.save( props )
 			.show()
 			.css({
 				backgroundImage: 'none',
@@ -38,11 +37,11 @@ $.effects.effect.highlight = function( o ) {
 				duration: o.duration,
 				easing: o.easing,
 				complete: function() {
-					(mode == 'hide' && elem.hide());
-					$.effects.restore( elem, props );
+					(mode == 'hide' && el.hide());
+					el.restore( props );
 					(mode == 'show' && !$.support.opacity && this.style.removeAttribute( 'filter' ));
 					jQuery.isFunction(o.complete) && o.complete.apply(this, arguments);
-					elem.dequeue();
+					el.dequeue();
 				}
 			});
 	});
