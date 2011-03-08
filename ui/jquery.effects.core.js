@@ -458,7 +458,7 @@ if ( BC ) {
 
 	$.each( [ "save", "restore", "createWrapper", "setMode", "removeWrapper", "setTransition" ], function( i, fnName ) {
 		$.effects[ fnName ] = function() {
-			var args = Array.prototype.slice.call( arguments ),
+			var args = [].slice.call( arguments ),
 				el = args.shift();
 
 			return $.effects.$.fn[ fnName ].apply( el, args );
