@@ -457,8 +457,10 @@ if ( BC ) {
 
 	$.each( [ "save", "restore", "createWrapper", "setMode", "removeWrapper", "setTransition" ], function( i, fnName ) {
 		$.effects[ fnName ] = function() {
-			var args = Array.prototype.slice.call(arguments);
-			return $.effects.$.fn[ fnName ].call( args.shift(), args );
+			var args = Array.prototype.slice.call( arguments ),
+				el = args.shift();
+			console.log(fnName, el, args);
+			return $.effects.$.fn[ fnName ].apply( el, args );
 		};	
 	});
 
