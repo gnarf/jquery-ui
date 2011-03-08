@@ -12,7 +12,7 @@
  */
 (function( $, undefined ) {
 
-$.effects.puff = function( o ) {
+$.effects.effect.puff = function( o ) {
 	console.log(o);
 	return this.queue( function() {
 		var elem = $( this ),
@@ -41,7 +41,7 @@ $.effects.puff = function( o ) {
 	});
 };
 
-$.effects.scale = function( o ) {
+$.effects.effect.scale = function( o ) {
 
 	return this.queue( function() {
 
@@ -93,7 +93,7 @@ $.effects.scale = function( o ) {
 
 };
 
-$.effects.size = function( o ) {
+$.effects.effect.size = function( o ) {
 
 	return this.queue( function() {
 		// Create element

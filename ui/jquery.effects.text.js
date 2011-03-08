@@ -24,7 +24,7 @@
 		random: false
 	};
 	
-	$.effects.textExplode = function (o, show) {
+	$.effects.effect.textExplode = function (o, show) {
 	
 		var docHeight = $(document).height(),
 			docWidth = $(document).width(); /* show is either 1 or null */
@@ -137,14 +137,14 @@
 		});
 	
 		/* Pass everything to the general text engine */
-		$.effects.textAnim.call(this, o);
+		$.effects.effect.textAnim.call(this, o);
 	};
 	
-	$.effects.textConverge = function (o) {
-		$.effects.textExplode.call(this, o, 1);
+	$.effects.effect.textConverge = function (o) {
+		$.effects.effect.textExplode.call(this, o, 1);
 	};
 	
-	$.effects.backspace = function (o, show) { /* show is either 1 or null */
+	$.effects.effect.backspace = function (o, show) { /* show is either 1 or null */
 		show = show || 0;
 	
 		/* Internal callback to run when animation has finished */
@@ -197,15 +197,15 @@
 		});
 	
 		/* Pass everything to the general text engine */
-		$.effects.textAnim.call(this, o);
+		$.effects.effect.textAnim.call(this, o);
 	};
 	
 	
-	$.effects.type = function (o) { /* Use the backspace, for redundancy purposes */
-		$.effects.backspace.call(this, o, 1);
+	$.effects.effect.type = function (o) { /* Use the backspace, for redundancy purposes */
+		$.effects.effect.backspace.call(this, o, 1);
 	};
 	
-	$.effects.disintegrate = function (o, show) {
+	$.effects.effect.disintegrate = function (o, show) {
 	
 		var docHeight = $(document).height(),
 			docWidth = $(document).width(); /* show is either 1 or null (build or disintegrate) */
@@ -288,7 +288,7 @@
 	
 						properties.top = top > mTop ? mTop : top; // 1 = o.distance
 					} else if (o.direction.indexOf('top') !== -1) {
-						var top = offset.top - parentCoords.height * o.distance
+						var top = offset.top - parentCoords.height * o.distance;
 	
 						properties.top = top < 0 ? 0 : top; // 1 = o.distance
 					}
@@ -328,14 +328,14 @@
 		});
 	
 		/* Pass everything to the general text engine */
-		$.effects.textAnim.call(this, o);
+		$.effects.effect.textAnim.call(this, o);
 	};
 	
-	$.effects.build = function (o) { /* Use the disintegrate, for redundancy purposes */
-		$.effects.disintegrate.call(this, o, 1);
+	$.effects.effect.build = function (o) { /* Use the disintegrate, for redundancy purposes */
+		$.effects.effect.disintegrate.call(this, o, 1);
 	};
 	
-	$.effects.blockFadeOut = function (o, show) { /* show is either 1 or null */
+	$.effects.effect.blockFadeOut = function (o, show) { /* show is either 1 or null */
 		show = show || 0;
 	
 		/* Internal callback to run when animation has finished */
@@ -384,15 +384,15 @@
 		});
 	
 		/* Pass everything to the general text engine */
-		$.effects.textAnim.call(this, o);
+		$.effects.effect.textAnim.call(this, o);
 	};
 	
 	
-	$.effects.blockFadeIn = function (o) { /* Use the blockFadeOut, for redundancy purposes */
-		$.effects.blockFadeOut.call(this, o, 1);
+	$.effects.effect.blockFadeIn = function (o) { /* Use the blockFadeOut, for redundancy purposes */
+		$.effects.effect.blockFadeOut.call(this, o, 1);
 	};
 	
-	$.effects.textAnim = function (o) {
+	$.effects.effect.textAnim = function (o) {
 	
 		return this.queue(
 	

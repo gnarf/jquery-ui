@@ -36,10 +36,9 @@ $.effects.effect.blind = function( o ) {
 		// Animate
 		wrapper.animate( animation, o.duration, o.easing, function() {
 			( mode == 'hide' && el.hide() );
-			el.restore( props )
-				.removeWrapper()
-				.dequeue();
+			el.restore( props ).removeWrapper();
 			$.isFunction( o.complete ) && o.complete.apply( el[ 0 ], arguments );
+			el.dequeue();
 		});
 
 	});
