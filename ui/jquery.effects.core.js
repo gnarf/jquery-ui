@@ -9,7 +9,14 @@
  */
 ;jQuery.effects || (function($, undefined) {
 
-$.effects = {};
+var	BC = $.uiBackCompat !== false;
+
+$.effects = {
+	$: $.sub(),
+
+	// contains effects 1.9+ API effect functions
+	effect: {}
+};
 
 /******************************************************************************/
 /****************************** COLOR ANIMATIONS ******************************/
@@ -319,34 +326,9 @@ $.fn.extend({
 $.extend( $.effects, {
 	version: "@VERSION",
 
-	// Saves a set of properties in a data storage
-	save: function( element, set ) {
-		for( var i=0; i < set.length; i++ ) {
-			if ( set[ i ] !== null ) {
-				element.data( "ec.storage." + set[ i ], element[ 0 ].style[ set[ i ] ] );
-			}
-		}
-	},
-
-	// Restores a set of previously saved properties from a data storage
-	restore: function( element, set ) {
-		for( var i=0; i < set.length; i++ ) {
-			if ( set[ i ] !== null ) {
-				element.css( set[ i ], element.data( "ec.storage." + set[ i ] ) );
-			}
-		}
-	},
-
-	setMode: function( el, mode ) {
-		if (mode == 'toggle') {
-			mode = el.is( ':hidden' ) ? 'show' : 'hide'; 
-		}
-		return mode;
-	},
-
 	// Translates a [top,left] array into a baseline value
 	// this should be a little more flexible in the future to handle a string & hash
-	getBaseline: function( origin, original ) { 
+	getBaseline: function( origin, original ) {
 		var y, x;
 		switch ( origin[ 0 ] ) {
 			case 'top': y = 0; break;
@@ -364,18 +346,41 @@ $.extend( $.effects, {
 			x: x,
 			y: y
 		};
+	}
+});
+
+// Effects 1.9 Helper jQuery.sub()
+$.effects.$.fn.extend({
+
+	// Saves a set of properties in a data storage
+	save: function( set ) {
+		for( var i=0; i < set.length; i++ ) {
+			if ( set[ i ] !== null ) {
+				this.data( "ec.storage." + set[ i ], this[ 0 ].style[ set[ i ] ] );
+			}
+		}
+		return this;
 	},
 
-	// Wraps the element around a wrapper that copies position properties
-	createWrapper: function( element ) {
+	// Restores a set of previously saved properties from a data storage
+	restore: function( set ) {
+		for( var i=0; i < set.length; i++ ) {
+			if ( set[ i ] !== null ) {
+				this.css( set[ i ], this.data( "ec.storage." + set[ i ] ) );
+			}
+		}
+		return this;
+	},
 
+	createWrapper: function( css ) {
 		// if the element is already wrapped, return it
-		if ( element.parent().is( '.ui-effects-wrapper' )) {
-			return element.parent();
+		if ( this.parent().is( '.ui-effects-wrapper' )) {
+			return this.parent();
 		}
 
 		// wrap the element
-		var props = {
+		var element = this,
+			props = {
 				width: element.outerWidth(true),
 				height: element.outerHeight(true),
 				'float': element.css( 'float' )
@@ -417,24 +422,47 @@ $.extend( $.effects, {
 			});
 		}
 
-		return wrapper.css( props ).show();
+		if ( $.type( css ) == 'object' ) {
+			props = $.extend( props, css );
+		}
+
+		return wrapper.css( props ).show();		
+	},
+	setMode: function( mode ) {
+		if (mode == 'toggle') {
+			mode = this.is( ':hidden' ) ? 'show' : 'hide'; 
+		}
+		return mode;
 	},
 
-	removeWrapper: function( element ) {
-		if ( element.parent().is( '.ui-effects-wrapper' ) )
-			return element.parent().replaceWith( element );
-		return element;
+	removeWrapper: function() {
+		if ( this.parent().is( '.ui-effects-wrapper' ) )
+			return this.parent().replaceWith( this );
+		return this;
 	},
 
-	setTransition: function( element, list, factor, value ) {
+	setTransition: function( list, factor, value ) {
 		value = value || {};
 		$.each( list, function(i, x){
-			unit = element.cssUnit( x );
+			unit = this.cssUnit( x );
 			if ( unit[ 0 ] > 0 ) value[ x ] = unit[ 0 ] * factor + unit[ 1 ];
 		});
 		return value;
 	}
+	
 });
+
+// Effects 1.8 API -> 1.9
+if ( BC ) {
+
+	$.each( [ "save", "restore", "createWrapper", "setMode", "removeWrapper", "setTransition" ], function( i, fnName ) {
+		$.effects[ fnName ] = function() {
+			var args = Array.prototype.slice.call(arguments);
+			return $.effects.$.fn[ fnName ].call( args.shift(), args );
+		};	
+	});
+
+}
 
 // return an effect options object for the given parameters:
 function _normalizeArguments( effect, options, speed, callback ) {
@@ -488,7 +516,7 @@ function standardSpeed( speed ) {
 	}
 	
 	// invalid strings - treat as "normal" speed
-	if ( typeof speed === "string" && !$.effects[ speed ] ) {
+	if ( typeof speed === "string" && ! ( $.effects.effect[ speed ] || BC && $.effects[ speed ] ) ) {
 		return true;
 	}
 	
@@ -499,9 +527,12 @@ $.fn.extend({
 	effect: function( effect, options, speed, callback ) {
 		var args = _normalizeArguments.apply( this, arguments ),
 			mode = args.mode,
-			effectMethod = $.effects[ args.effect ];
-		
-		if ( $.fx.off || !effectMethod ) {
+			effectMethod = $.effects.effect[ args.effect ],
+
+			// DEPRECATED: Pre 1.9 API - effect functions existed in $.effects
+			oldEffectMethod = !effectMethod && BC && $.effects[ args.effect ];
+
+		if ( $.fx.off || ! ( effectMethod || oldEffectMethod ) ) {
 			// delegate to the original method (e.g., .show()) if possible
 			if ( mode ) {
 				return this[ mode ]( args.duration, args.callback );
@@ -513,7 +544,20 @@ $.fn.extend({
 				});
 			}
 		}
-		return effectMethod.call( this, args );
+
+		// DEPRECATED: effectMethod will always be true once BC is removed
+		if ( effectMethod ) {
+			return effectMethod.call( this, args );			
+		} else {
+
+			// DEPRECATED: convert back to old format
+			return oldEffectMethod.call(this, { 
+				options: args,
+				duration: args.duration,
+				callback: args.complete,
+				mode: args.mode
+			});
+		}
 	},
 
 	_show: $.fn.show,
