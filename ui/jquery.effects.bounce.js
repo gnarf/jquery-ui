@@ -87,7 +87,7 @@ $.effects.effect.bounce = function(o) {
 			el
 				.animate( animation1, speed / 2, o.easing )
 				.animate( animation2, speed / 2, o.easing, function() {
-					el.restore( props ).removeWrapper( el );
+					el.restore( props ).removeWrapper();
 					$.isFunction( o.complete ) && o.complete.apply( this, arguments );
 				});
 		}
