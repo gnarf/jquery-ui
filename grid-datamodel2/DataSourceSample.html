@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Grid: Data</title>
+	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
+	<link rel="stylesheet" href="grid.css">
+	<script src="../jquery-1.4.4.js"></script>
+	<script src="jquery.tmpl.js"></script>
+	<script src="jquery.tmplPlus.js"></script>
+	<script src="../ui/jquery.ui.core.js"></script>
+	<script src="../ui/jquery.ui.widget.js"></script>
+	<script src="grid.js"></script>
+	<script src="jquery.datalink2.js"></script>
+	<script src="jquery.datasource.js"></script>
+	<script src="jquery.pager.js"></script>
+
+	<script>
+
+	var localDevelopers = [
+		{
+			firstName: "Scott",
+			lastName: "González",
+			country: "USA",
+			twitter: "scott_gonzalez",
+			github: "scottgonzalez"
+		},
+		{
+			firstName: "Richard",
+			lastName: "Worth",
+			country: "USA",
+			twitter: "rworth",
+			github: "rdworth"
+		},
+		{
+			firstName: "Jörn",
+			lastName: "Zaefferer",
+			country: "Germany",
+			twitter: "bassistance",
+			github: "jzaefferer"
+		}
+	];
+
+	$(function() {
+		// We'll bind this array to a dataSource, which will control the array's contents.
+		var filteredLocalDevelopers = [];
+
+		// Bind a grid to filteredLocalDevelopers.  The grid will react to array changes.
+		// Notice that the grid has no awareness of a dataSource.
+		// You can imagine a paging control that _would_ be aware of an ambient dataSource and would dynamically change query 
+		// options (like we do in #filterDevelopers below) to change the contents of an array to which a grid is bound.
+		var developersGrid = $( "#developers-remote" ).grid({
+			columns: [ "firstName", "lastName", "country" ],
+			source: filteredLocalDevelopers
+		}).data( "grid" );
+		$.setField(developersGrid, "source", filteredLocalDevelopers);  // TODO -- The widget factory deeply copies options, which loses filteredLocalDevelopers.
+
+		// The dataSource bound to filteredLocalDevelopers controls its contents.
+		// The "inputArray" option causes the dataSource to apply query options locally on refresh().
+		// We'll dynamically reconfigure the filter on this dataSource to change the contents of filteredLocalDevelopers.
+		$([ filteredLocalDevelopers ]).dataSource({
+			inputArray: localDevelopers
+		}).refresh();  // refresh() causes the dataSource to update the contents of the array to which it's bound.
+
+		// Dynamically configure the query options on the dataSource.  refresh() to update the array contents.
+		var filtered;
+		$("#filterDevelopers").click(function () {
+			if (filtered) {
+				$([ filteredLocalDevelopers ]).dataSource().option("filter").refresh();  // No r-value means unset.
+			} else {
+				$([ filteredLocalDevelopers ]).dataSource().option("filter", { property: "firstName", value: "Richard" }).refresh();
+			}
+			filtered = !filtered;
+			$("#filterDevelopers").val(filtered ? "Remove filter" : "Filter developers");
+		});
+
+		// A similar example...but with server integration and remote queries.
+		var genres = [];
+		var genresGrid = $( "#genres" ).grid({
+			columns: [ "Name" ],
+			source: genres
+		}).data( "grid" );
+		$.setField(genresGrid, "source", genres);  // TODO -- The widget factory deeply copies options, which loses genres.
+
+		// No "inputArray" option means the dataSource should bind to remote data, employing options.urlMapper to render query options
+		// into a URL to $.ajax.  I stole this urlMapper technique from Boris' earlier data model prototype.
+		var options = $.extend({
+			path: "http://odata.netflix.com/Catalog/Genres"
+		}, $.dataSource.oDataSettings);
+		$([ genres ]).dataSource(options);
+
+		// Bind a paging control to the data source feeding "genres".  The paging control determines the paging options
+		// on the data source and refreshes the data source on paging clicks.
+		// Notice that the pager has no awareness of the "genres" array, since it doesn't need it.
+		$("#genresPager").pager({
+			dataSource: $([ genres ]).dataSource(),
+			pageSize: 10
+		});
+
+		// An example of how an app itself can control the query options on a data source, just as a control might.
+		// You can imagine lifting code similar to this into a sorting control, like that pager used above.
+		var sorted;
+		$("#sortGenres").click(function () {
+			$("#genresPager").pager("setPage", { pageNumber: 0, refresh: false });  // Changing sort resets to page zero.
+			if (sorted) {
+				$([ genres ]).dataSource().option("sort").refresh();
+			} else {
+				$([ genres ]).dataSource().option("sort", { property: "Name", direction: "desc" }).refresh();
+			}
+			sorted = !sorted;
+			$("#sortGenres").val(sorted ? "Remove sort" : "Sort genres");
+		});
+
+		// CUD operations are directed at our array and its contained items.  Our grid is listening for change events
+		// on arrays and (later) on items, reflecting these changes in the DOM.  Our data source is similarly listening,
+		// turning change events into POSTs (one per change or by logging changes for one POST on commit).
+		$("#addGenre").click(function () {
+			$.changeArray(genres, "unshift", { Name: "19th Century Period Pieces" });
+		});
+		$("#deleteGenre").click(function () {
+			$.changeArray(genres, "shift");
+		});
+
+		// Prime the data source to populate the "genres" array, which in turn will cause the grid to wake up
+		// and render the new contents of the array.
+		$([ genres ]).dataSource().refresh();
+	});
+	</script>
+</head>
+<body>
+
+
+<h2>local data source</h2>
+<p>
+<table id="developers-remote">
+	<thead>
+		<tr>
+			<th data-field="firstName">First Name</th>
+			<th data-field="lastName">Last Name</th>
+			<th data-field="country">Country</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+</p>
+
+<p><input id="filterDevelopers" type="button" value="Filter developers"></input></p>
+
+<h2>remote data source</h2>
+<p><div id="genresPager"></div></p>
+
+<p>
+<table id="genres">
+	<thead>
+		<tr>
+			<th data-field="Name">Name</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+</p>
+
+<p><input id="sortGenres" type="button" value="Sort genres"></input></p>
+<p><input id="addGenre" type="button" value="Add a genre"></input></p>
+<p><input id="deleteGenre" type="button" value="Delete first genre"></input></p>
+
+</body>
+</html>
