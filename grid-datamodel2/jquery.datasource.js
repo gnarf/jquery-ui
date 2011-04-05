@@ -58,8 +58,12 @@
                 filter = Object.prototype.toString.call(filter) === "[object Array]" ? filter : [ filter ];
                 $.each(filter, function (index, filterPart) {
                     path +=
-                        "&$filter=" + filterPart.filterProperty + filterPart.filterOperator + 
-                        (typeof filterPart.filterBy === "string" ? ("'" + filterPart.filterBy + "'") : filterPart.filterBy);
+                        "&$filter=";
+                    var filterValue = typeof filterPart.filterValue === "string" ? ("'" + filterPart.filterValue + "'") : filterPart.filterValue;
+                    path += filterPart.filterOperator === "Contains" ?
+                        ("substringof(" + filterValue + "," + filterPart.filterProperty + ")") : 
+                        (filterPart.filterProperty + filterPart.filterOperator + filterValue);
+                    // TODO -- Build this out properly.
                 });
             }
             return path;
@@ -206,7 +210,9 @@
                 }
 
                 if (!filterOperator) {
-                    throw "Unrecognized filter operator '" + filter.operator + "'.";
+                    // Assume that the filter operator is one that the data source recognizes intrinsically.
+                    filterOperator = filter.operator;
+                    // throw "Unrecognized filter operator '" + filter.operator + "'.";
                 }
             }
 
@@ -243,14 +249,35 @@
         DataSource.apply(this, [ options ]);
 
         this._inputItemsArray = inputArray;
-        // TODO -- You can imagine binding to "arrayChange" on inputArray and raising an event when the data source
-        // encounters changes that would require the client to "refresh" to reapply the query to the input data.
-        // This would keep the app author the flexibility to control when they reapply local queries (so items don't
-        // disappear when edited) without coupling their edit/refresh logic.
+
+        var inputDataSource = $([ this._inputItemsArray ]).dataSource();
+        if (inputDataSource) {
+            var self = this;
+            this._inputArrayChangeHandler = function () {
+                // TODO -- Rather than directly refreshing here on an input array change, you can imagine 
+                // raising a "resultsStale" event when the data source encounters changes that would require 
+                // the client to "refresh" to reapply the query to the input data.
+                // This would keep the app author the flexibility to control when they reapply local queries 
+                // (so items don't disappear when edited) without coupling their edit/refresh logic.
+                self.refresh();
+            };
+
+            $([ this._inputItemsArray ]).bind("changeArray", this._inputArrayChangeHandler);
+        }
     };
 
     LocalDataSource.prototype = $.extend({}, new DataSource(), {
         _inputItemsArray: [],
+        _inputArrayChangeHandler: null,
+
+        destroy: function () {
+            DataSource.prototype.destroy.apply(this);
+
+            if (this._inputArrayChangeHandler) {
+                $([ this._inputItemsArray ]).unbind("changeArray", this._inputArrayChangeHandler);
+                this._inputArrayChangeHandler = null;
+            }
+        },
 
         _applyQuery: function () {
             var items = this._inputItemsArray;
@@ -268,7 +295,7 @@
             var sortedItems;
             if (this._sortProperty) {
                 var isAscending = (this._sortDir || "asc").toLowerCase().indexOf("asc") === 0;
-                sortedItems = filteredItems.sort(function (item1, item2) {
+                sortedItems = filteredItems.slice().sort(function (item1, item2) {
                     var propertyValue1 = self._normalizePropertyValue(item1, self._sortProperty),
                         propertyValue2 = self._normalizePropertyValue(item2, self._sortProperty);
                     if (propertyValue1 == propertyValue2) {
@@ -325,6 +352,7 @@
                     case "!=": comparer = function (propertyValue) { return propertyValue != filterValue; }; break;
                     case ">=": comparer = function (propertyValue) { return propertyValue >= filterValue; }; break;
                     case ">": comparer = function (propertyValue) { return propertyValue > filterValue; }; break;
+                    case "Contains": comparer = function (propertyValue) { return propertyValue.indexOf(filterValue) >= 0; }; break;
                     default: throw "Unrecognized filter operator.";
                 };
 
@@ -337,6 +365,10 @@
         },
 
         _handleArrayChange: function (change) {
+            if (change.isInternalChange) {
+                return;
+            }
+
             switch (change.change) {
             case "add":
                 // change.newIndex is with repect to itemsArray (our output array).  We ignore it here
@@ -387,7 +419,15 @@
             function completeRefresh() {
                 var results = self._applyQuery();
                 self.totalCount = results.totalCount;
-                $.changeArray.apply(null, [ self.itemsArray, "splice", 0, self.itemsArray.length ].concat(results.items));
+
+                // Manually trigger "setArray"/"changeArray" so that we can piggy-back "isInternalChange".
+                // In our "changeArray" handlers, we'll distinguish client-initiated changes from self-inflicted
+                // changes in this way.
+                var eventArguments = [ { change: "reset" } ];
+                $([ self.itemsArray ]).trigger("setArray", eventArguments);
+                Array.prototype.splice.apply(self.itemsArray, [ 0, self.itemsArray.length ].concat(results.items));
+                $([ self.itemsArray ]).trigger({ type: "changeArray", isInternalChange: true }, eventArguments);
+                // TODO -- Rework $.changeArray in such a way that we can piggy-back isInternalChange as above.
 
                 if (options && options.completed && $.isFunction(options.completed)) {
                     options.completed();
@@ -419,6 +459,10 @@
         _resultsFilter: null,
 
         _handleArrayChange: function (change) {
+            if (change.isInternalChange) {
+                return;
+            }
+
             // TODO -- This is where we would develop an SPI that allows for pushing changes back to the server.
             // This could be done by logging changes and POSTing during some $().dataSource().commit().
             // It could also directly call $.ajax to issue a POST per array or property change.

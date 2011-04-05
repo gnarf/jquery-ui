@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Data model: CUD with local queries</title>
+	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
+	<link rel="stylesheet" href="grid.css">
+	<script src="../jquery-1.4.4.js"></script>
+	<script src="jquery.tmpl.js"></script>
+	<script src="jquery.tmplPlus.js"></script>
+	<script src="../ui/jquery.ui.core.js"></script>
+	<script src="../ui/jquery.ui.widget.js"></script>
+	<script src="../ui/jquery.ui.menu.js"></script>
+	<script src="../ui/jquery.ui.autocomplete.js"></script>
+	<script src="grid.js"></script>
+	<script src="jquery.datalink2.js"></script>
+	<script src="jquery.datasource.js"></script>
+	<script src="jquery.pager.js"></script>
+
+	<script>
+
+	$(function() {
+
+		// A remote data source managing the contents of "remoteGenres".
+		var remoteGenres = [];
+		var options = $.extend({
+			path: "http://odata.netflix.com/Catalog/Genres"
+		}, $.dataSource.oDataSettings);
+		$([ remoteGenres ]).dataSource(options);  // refresh() causes the data source to update the contents of the array to which it's bound.
+
+		// A local data source applying a "Century" filter in-memory over "remoteGenres".
+		var genresCentury = [];
+		$([ genresCentury ]).dataSource({
+			inputArray: remoteGenres,
+			filter: { property: "Name", operator: "Contains", value: "Century" }
+		}).refresh();
+		var genresCenturyGrid = $( "#genresCentury" ).grid({
+			columns: [ "Name" ],
+			source: genresCentury,
+			selectMode: "single"
+		}).data( "grid" );
+		$.setField(genresCenturyGrid, "source", genresCentury);  // TODO -- The widget factory deeply copies options, which loses genres.
+
+		// A local data source applying a "Africa" filter in-memory over the same "remoteGenres".
+		var genresAfrica = [];
+		$([ genresAfrica ]).dataSource({
+			inputArray: remoteGenres,
+			filter: { property: "Name", operator: "Contains", value: "Africa" }
+		}).refresh();
+		var genresAfricaGrid = $( "#genresAfrica" ).grid({
+			columns: [ "Name" ],
+			source: genresAfrica,
+			selectMode: "single"
+		}).data( "grid" );
+		$.setField(genresAfricaGrid, "source", genresAfrica);  // TODO -- The widget factory deeply copies options, which loses genres.
+
+		// Do simple array mutation using "$.changeArray" in order to raise "setArray/changeArray" events.
+		// Changes to "remoteGenres" are reflected in "genresCentury" and "genresAfrica".
+		// Changes to "remoteGenres" are also tracked/POSTd by its remote data source.
+		$("#addFifthCentury, #addAfricanNaturalist, #addSeventhCenturyAfrican").click(function () {
+			$.changeArray(remoteGenres, "unshift", { Name: $(this).next().val() });
+		});
+
+		// Notice that this delete is targeted at the local "genresCentury" and that the
+		// delete is automatically translated to "remoteGenres".
+		// If the delete covers a genre also in the "Africa" grid, it'll be automatically
+		// deleted from that "genresAfrica" and its grid as well.
+		$("#deleteCenturyGenre").click(function () {
+			var index = $.inArray(genresCenturyGrid.selectedItem.data, genresCentury);
+			if (index >= 0) {
+				$.changeArray(genresCentury, "splice", index, 1);
+			}
+		});
+		$("#deleteAfricaGenre").click(function () {
+			var index = $.inArray(genresAfricaGrid.selectedItem.data, genresAfrica);
+			if (index >= 0) {
+				$.changeArray(genresAfrica, "splice", index, 1);
+			}
+		});
+
+		$([ remoteGenres ]).dataSource().refresh();
+	});
+	</script>
+</head>
+<body>
+
+
+<h2>Genres containing "Century"</h2>
+<p>
+<table id="genresCentury">
+	<thead>
+		<tr>
+			<th data-field="Name">Name</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+</p>
+
+<p><input id="deleteCenturyGenre" type="button" value="Delete selected 'Century' genre"></input></p>
+
+<h2>Genres containing "Africa"</h2>
+<p>
+<table id="genresAfrica">
+	<thead>
+		<tr>
+			<th data-field="Name">Name</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+</p>
+
+<p><input id="deleteAfricaGenre" type="button" value="Delete selected 'Africa' genre"></input></p>
+
+<p><br/></p>
+<p><input id="addFifthCentury" type="button" value="Add:"></input><input type="text" value="Fifth Century"></input></p>
+<p><input id="addAfricanNaturalist" type="button" value="Add:"></input><input type="text" value="African Naturalist"></input></p>
+<p><input id="addSeventhCenturyAfrican" type="button" value="Add:"></input><input type="text" value="Seventh Century African"></input></p>
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Data model: Grid over simple array</title>
+	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
+	<link rel="stylesheet" href="grid.css">
+	<script src="../jquery-1.4.4.js"></script>
+	<script src="jquery.tmpl.js"></script>
+	<script src="jquery.tmplPlus.js"></script>
+	<script src="../ui/jquery.ui.core.js"></script>
+	<script src="../ui/jquery.ui.widget.js"></script>
+	<script src="grid.js"></script>
+	<script src="jquery.datalink2.js"></script>
+	<script src="jquery.datasource.js"></script>
+	<script src="jquery.pager.js"></script>
+
+	<script>
+
+	var developers = [
+		{
+			firstName: "Scott",
+			lastName: "González",
+			country: "USA",
+			twitter: "scott_gonzalez",
+			github: "scottgonzalez"
+		},
+		{
+			firstName: "Jörn",
+			lastName: "Zaefferer",
+			country: "Germany",
+			twitter: "bassistance",
+			github: "jzaefferer"
+		},
+		{
+			firstName: "Brad",
+			lastName: "Olenick",
+			country: "USA",
+			twitter: "",
+			github: "brado23"
+		},
+		{
+			firstName: "Richard",
+			lastName: "Worth",
+			country: "USA",
+			twitter: "rworth",
+			github: "rdworth"
+		},
+		{
+			firstName: "Boris",
+			lastName: "Moore",
+			country: "USA",
+			twitter: "borismoore",
+			github: "BorisMoore"
+		}
+	];
+
+	$(function() {
+		// Bind a grid to "developers".  The grid will react to array changes.
+		var developersGrid = $( "#developers" ).grid({
+			columns: [ "firstName", "lastName", "country" ],
+			source: developers,
+			selectMode: "single"
+		}).data( "grid" );
+		$.setField(developersGrid, "source", developers);  // TODO -- The widget factory deeply copies options, which loses "developers".
+
+		// CUD operations are directed at our array and its contained items.  The grid is listening for change events
+		// on arrays and (later) on items, reflecting these changes in the DOM.
+		$("#addDeveloper").click(function () {
+			$.changeArray(developers, "push", { firstName: $("#developerName").val() });
+		});
+		$("#deleteDeveloper").click(function () {
+			var index = $.inArray(developersGrid.selectedItem.data, developers);
+			if (index >= 0) {
+				$.changeArray(developers, "splice", index, 1);
+			}
+		});
+	});
+	</script>
+</head>
+<body>
+
+
+<h2>Grid over simple array</h2>
+<p>
+<table id="developers">
+	<thead>
+		<tr>
+			<th data-field="firstName">First Name</th>
+			<th data-field="lastName">Last Name</th>
+			<th data-field="country">Country</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+</p>
+
+<p><input id="addDeveloper" type="button" value="Add developer with name:"></input><input id="developerName" type="text" value="Fred"></input></p>
+<p><input id="deleteDeveloper" type="button" value="Delete selected developer"></input></p>
+
+</body>
+</html>

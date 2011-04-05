@@ -34,7 +34,7 @@
 
                         function updatePager(totalItemCount) {
                             if (totalItemCount) {
-                                pageCount = totalItemCount === 0 ? 1 : ((totalItemCount / pageSize) + (totalItemCount % pageSize ? 1 : 0));
+                                pageCount = totalItemCount === 0 ? 1 : Math.ceil(totalItemCount / pageSize);
                                 if (pageNumber >= pageCount) {
                                     // On last refresh, the item count decreased such that we're positioned past the last page.
                                     // Put us on the _new_ last page.
