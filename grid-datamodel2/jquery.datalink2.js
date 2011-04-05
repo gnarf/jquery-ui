@@ -54,7 +54,7 @@ var fnSetters = {
 					return { change: "add", newIndex: index, newItems: elementsToAdd };
 				}
 			} else {
-				var elementsToRemove = arr.slice( index, numToRemove );
+				var elementsToRemove = arr.slice( index, index + numToRemove );
 				if ( elementsToAdd.length ) {
 					var move = elementsToAdd.length === elementsToRemove.length &&
 						$.grep( elementsToAdd, function ( elementToAdd, index ) {
