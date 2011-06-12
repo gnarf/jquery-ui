@@ -16,10 +16,13 @@ test('destroy', function() {
 	ok(!$.data(inp[0], PROP_NAME), 'Default - instance absent');
 	ok(inp.next().is('#alt'), 'Default - button absent');
 	// With button
-	inp= init('#inp', {showOn: 'both'});
+	inp= init('#inp', {
+		showOn: 'both',
+		buttonText: 'Pick Date'
+	});
 	ok(inp.is('.hasDatepicker'), 'Button - marker class set');
 	ok($.data(inp[0], PROP_NAME), 'Button - instance present');
-	ok(inp.next().text() == '...', 'Button - button added');
+	ok(inp.next().text() == 'Pick Date', 'Button - button added');
 	inp.datepicker('destroy');
 	inp = $('#inp');
 	ok(!inp.is('.hasDatepicker'), 'Button - marker class cleared');
