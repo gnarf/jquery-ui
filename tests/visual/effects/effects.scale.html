@@ -1,42 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8" />
+	<meta charset="utf-8">
 	<title>jQuery UI Effects Test Suite</title>
-	<link rel="stylesheet" href="effects.all.css" type="text/css" />
-	<script type="text/javascript" src="../../../jquery-1.5.1.js"></script>
-	<script type="text/javascript" src="../../../ui/jquery.effects.core.js"></script>
-	<script type="text/javascript" src="../../../ui/jquery.effects.scale.js"></script>
-	<script type="text/javascript" src="effects.all.js"></script>
-	<style type="text/css" media="screen">
-		#testArea {
-			border: 5px dashed #777;
-			width: 200px;
-			height: 200px;
-			position: relative;
-		}
-		#testBox {
-			width: 50px;
-			height: 50px;
-			background-color: #bada55;
-			color: black;
-			border: 10px solid #fff;
-			margin: 10px;
-			padding: 10px;
-		}
-		label {
-			display: block;
-		}
-		#controls {
-			position: absolute;
-			z-index: 300;
-			left: 50%;
-			top: 50%;
-			margin-left: -200px;
-			width: 400px;
-			opacity: 0.8;
+	<link rel="stylesheet" href="effects.all.css" type="text/css">
+	<script src="../../../jquery-1.5.1.js"></script>
+	<script src="../../../ui/jquery.effects.core.js"></script>
+	<script src="../../../ui/jquery.effects.scale.js"></script>
+	<script src="effects.all.js"></script>
+	<script type="text/javascript" charset="utf-8">
+	jQuery(function( $ ) {
+		var test = $( "#testBox" ),
+			opts = $( ".arg" ),
+			optsRev = $( opts.get().reverse() ),
+			doer = $( "#doAnim" ),
+			current = $( "#current" ),
+			cleanStyle = test[0].style,
+			total = 1;
+
+		opts.each(function() {
+			total *= this.options.length;
+		});
+
+		opts.change( doAnim );
+		doer.click( doAnim );
+		$( "#cyclePrev" ).click(function() {
+			cycle( -1 );
+		});
+		$( "#cycleNext" ).click(function() {
+			cycle( 1 );
+		});
+
+		function cycle( direction ) {
+			optsRev.each(function() {
+				var cur = this.selectedIndex,
+					next = cur + direction,
+					len = this.options.length;
+				
+				this.selectedIndex = ( next + len ) % len;
+				
+				if ( ( next+len ) % len === next ) return false;
+			});
+			doAnim();
 		}
 
+
+		function doAnim() {
+			var cur = 0;
+			opts.each(function() {
+				cur *= this.options.length
+				cur += this.selectedIndex;
+			});
+			cur++;
+			current.text( "Configuration: " + cur + " of " + total );
+			run.apply(test, opts.map(function() {
+				return $(this).val();
+			}).get());
+		}
+
+		function run( position, v, h, vo, ho ) {
+			var el = this,
+				style = el[0].style,
+				effect = {
+					effect: "scale",
+					mode: "effect",
+					percent: 200,
+					origin: [ vo, ho ],
+					duration: 500
+				};
+			el.stop(true, true);
+			if ( typeof style === "object" ) {
+				style.cssText = "";
+			} else {
+				el[0].style = "";
+			}
+			el.css( "position", position )
+				.css( h, 5 )
+				.css( v, 5 )
+				.delay( 100 )
+				.effect( effect );
+		}
+	});
+	</script>
+	<style type="text/css">
+	#testArea {
+/*		border: 5px dashed #777;*/
+		width: 200px;
+		height: 200px;
+		position: relative;
+	}
+	#testBox {
+		width: 50px;
+		height: 50px;
+		background-color: #bada55;
+		color: black;
+		border: 10px solid #fff;
+		margin: 10px;
+		padding: 10px;
+	}
+	label {
+		display: block;
+	}
+	#controls {
+		position: absolute;
+		z-index: 300;
+		left: 50%;
+		top: 50%;
+		margin-left: -200px;
+		width: 400px;
+		opacity: 0.8;
+	}
 	</style>
 </head>
 <body>
@@ -83,79 +156,4 @@
 		<button id="doAnim">Run Animation</button>
 		<button id="cycleNext">Forward</button>
 	</div>
-
-	<script type="text/javascript" charset="utf-8">
-		(function( $ ) {
-			var test = $("#testBox"),
-				opts = $(".arg"),
-				optsRev = $( opts.get().reverse() ),
-				doer = $( "#doAnim" ),
-				current = $( "#current" ),
-				cleanStyle = test[0].style,
-				total = 1;
-
-			opts.each(function() {
-				total *= this.options.length;
-			});
-
-			opts.change( doAnim );
-			doer.click( doAnim );
-			$( "#cyclePrev" ).click(function() {
-				cycle( -1 );
-			});
-			$( "#cycleNext" ).click(function() {
-				cycle( 1 );
-			});
-
-			function cycle( direction ) {
-				optsRev.each(function() {
-					var cur = this.selectedIndex,
-						next = cur + direction,
-						len = this.options.length;
-					
-					this.selectedIndex = ( next + len ) % len;
-					
-					if ( ( next+len ) % len === next ) return false;
-				});
-				doAnim();
-			}
-
-
-			function doAnim() {
-				var cur = 0;
-				opts.each(function() {
-					cur *= this.options.length
-					cur += this.selectedIndex;
-				});
-				cur++;
-				current.text( "Configuration: " + cur + " of " + total );
-				run.apply(test, opts.map(function() {
-					return $(this).val();
-				}).get());
-			}
-
-			function run( position, v, h, vo, ho ) {
-				var el = this,
-					style = el[0].style,
-					effect = {
-						effect: "scale",
-						mode: "effect",
-						percent: 200,
-						origin: [ vo, ho ],
-						duration: 500
-					};
-				el.stop(true, true);
-				if ( typeof style === "object" ) {
-					style.cssText = "";
-				} else {
-					el[0].style = "";
-				}
-				el.css( "position", position )
-					.css( h, 0 )
-					.css( v, 0 )
-					.delay( 100 )
-					.effect( effect );
-			}
-		})( jQuery );
-	</script>
 </body>
