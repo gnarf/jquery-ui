@@ -12,18 +12,27 @@
  */
 (function( $, undefined ) {
 
-$.effects.fade = function(o) {
-	return this.queue(function() {
-		var elem = $(this),
-			mode = $.effects.setMode(elem, o.options.mode || 'hide');
+$.effects.effect.fade = function( o ) {
+	return this.queue( function( next ) {
+		var el = $( this ),
+			mode = $.effects.setMode( el, o.mode || 'toggle' ),
+			hide = mode === "hide";
 
-		elem.animate({ opacity: mode }, {
+		el.show();
+		el.animate({ 
+			opacity: hide ? 0 : 1
+		}, {
 			queue: false,
 			duration: o.duration,
-			easing: o.options.easing,
+			easing: o.easing,
 			complete: function() {
-				(o.callback && o.callback.apply(this, arguments));
-				elem.dequeue();
+				if ( hide ) {
+					el.hide();
+				}
+				if ( o.complete ) {
+					o.complete.call( this );
+				}
+				next();
 			}
 		});
 	});

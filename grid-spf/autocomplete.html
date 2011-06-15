@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Grid: Filtering</title>
+	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
+	<link rel="stylesheet" href="grid.css">
+	<script src="../jquery-1.5.1.js"></script>
+	<script src="../external/jquery.tmpl.js"></script>
+	<script src="../ui/jquery.ui.core.js"></script>
+	<script src="../ui/jquery.ui.widget.js"></script>
+	<script src="../ui/jquery.ui.position.js"></script>
+	<script src="../ui/jquery.ui.menu.js"></script>
+	<script src="../ui/jquery.ui.autocomplete.js"></script>
+	<script src="datasource.js"></script>
+	<script src="grid.js"></script>
+
+	<script>
+	$(function() {
+		var cities = $.ui.datasource({
+			source: function( request, response ) {
+				$.ajax({
+					url: "http://ws.geonames.org/searchJSON",
+					dataType: "jsonp",
+					data: {
+						featureClass: "P",
+						style: "full",
+						maxRows: 12,
+						name_startsWith: request.filter.term
+					},
+					success: function( data ) {
+						var result = $.map( data.geonames, function( item ) {
+							return $.extend({
+								label: item.name + (item.adminName1 ? ", " + item.adminName1 : "") + ", " + item.countryName,
+								value: item.name
+							}, item );
+						});
+						response( result, data.totalResultsCount );
+					}
+				});
+			}
+		});
+
+		$("#city").autocomplete({
+			minLength: 3,
+			source: function( request, response ) {
+				cities.option( "filter", request ).refresh( function() {
+					response( cities.toArray() );
+				});
+			}
+		});
+
+		// secondary view
+		$( "table" ).grid({
+			source: cities,
+			columns: [ "name", "adminName1", "adminCode1", "fclName", "adminName2", "population", "countryName" ]
+		});
+	});
+	</script>
+</head>
+<body>
+
+<h1>Autocomplete with custom datasource and secondary grid view</h1>
+<p>features: filtering</p>
+
+<form>
+	<label for="city">City</label><input id="city">
+</form>
+
+<table>
+	<thead>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+
+</body>
+</html>

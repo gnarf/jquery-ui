@@ -3,12 +3,7 @@
  */
 (function($) {
 
-module("datepicker: events", {
-	teardown: function() {
-		stop();
-		setTimeout(start, 13);
-	}
-});
+module("datepicker: events");
 
 var selectedThis = null;
 var selectedDate = null;
@@ -117,6 +112,11 @@ test('events', function() {
 	inp.val('02/04/2008').datepicker('show').
 		simulate('keydown', {ctrlKey: true, keyCode: $.simulate.VK_END});
 	equals(selectedDate, '', 'Callback close date - ctrl+end');
+
+	var inp2 = init('#inp2');
+	inp2.datepicker().datepicker('option', {onClose: callback}).datepicker('show');
+	inp.datepicker('show');
+	equals(selectedThis, inp2[0], 'Callback close this');
 });
 
 })(jQuery);

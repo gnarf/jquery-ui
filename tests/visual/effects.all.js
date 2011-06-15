@@ -1,5 +1,6 @@
 
 $(function() {
+	var duration = 1000, wait = 500;
 
 	$("div.effect")
 		.hover(function() { $(this).addClass("hover"); },
@@ -13,18 +14,31 @@ $(function() {
 
 		$(el).bind("click", function() {
 
-			$(this).addClass("current").hide(n, o, 1000, function() {
-				var self = this;
-				window.setTimeout(function() {
-					$(self).show(n, o, 1000, function() { $(this).removeClass("current"); });
-				},500);
-			});
+			$(this).addClass("current")
+				// delaying the initial animation makes sure that the queue stays in tact
+				.delay( 10 )
+				.hide( n, o, duration )
+				.delay( wait )
+				.show( n, o, duration, function() { 
+					$( this ).removeClass("current"); 
+				});
 		});
 
 	};
+	
+	$("#hide").click(function() {
+		var el = $(this);
+		el.addClass("current").hide(duration, function() {
+			setTimeout(function() {
+				el.show(duration, function() { el.removeClass("current"); });
+			}, wait);
+		});
+	});
 
-	effect("#blindHorizontally", "blind", { direction: "horizontal" });
-	effect("#blindVertically", "blind", { direction: "vertical" });
+	effect("#blindLeft", "blind", { direction: "left" });
+	effect("#blindUp", "blind", { direction: "up" });
+	effect("#blindRight", "blind", { direction: "right" });
+	effect("#blindDown", "blind", { direction: "down" });
 
 	effect("#bounce3times", "bounce", { times: 3 });
 
@@ -39,6 +53,8 @@ $(function() {
 	effect("#explode9", "explode", {});
 	effect("#explode36", "explode", { pieces: 36 });
 
+	effect("#fade", "fade", {});
+
 	effect("#fold", "fold", { size: 50 });
 
 	effect("#highlight", "highlight", {});
@@ -47,6 +63,16 @@ $(function() {
 
 	effect("#puff", "puff", { times: 2 });
 	effect("#scale", "scale", {});
+	effect("#size", "size", {});
+	$("#sizeToggle").bind("click", function() {
+		var opts = { to: { width: 300, height: 300 }};
+		$(this).addClass('current')
+			.toggle("size", opts, duration)
+			.delay(wait)
+			.toggle("size", opts, duration, function() {
+				$(this).removeClass("current");
+			});
+	});
 
 	$("#shake").bind("click", function() { $(this).addClass("current").effect("shake", {}, 100, function() { $(this).removeClass("current"); }); });
 
@@ -61,20 +87,20 @@ $(function() {
 		$(this).addClass(function() {
 			window.console && console.log(arguments);
 			return "current";
-		}, 1000, function() {
+		}, duration, function() {
 			$(this).removeClass("current");
 		});
 	});
 	$("#removeClass").click(function() {
 		$(this).addClass("current").removeClass(function() {
 			window.console && console.log(arguments);
-			return "current"
-		}, 1000);
+			return "current";
+		}, duration);
 	});
 	$("#toggleClass").click(function() {
 		$(this).toggleClass(function() {
 			window.console && console.log(arguments);
-			return "current"
-		}, 1000);
+			return "current";
+		}, duration);
 	});
 });

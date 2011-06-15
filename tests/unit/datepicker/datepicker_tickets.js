@@ -3,12 +3,7 @@
  */
 (function($) {
 
-module("datepicker: tickets", {
-	teardown: function() {
-		stop();
-		setTimeout(start, 13);
-	}
-});
+module("datepicker: tickets");
 
 // http://forum.jquery.com/topic/several-breaking-changes-in-jquery-ui-1-8rc1
 test('beforeShowDay-getDate', function() {
@@ -27,6 +22,20 @@ test('beforeShowDay-getDate', function() {
 	// contains non-breaking space
 	equals($('div.ui-datepicker-title').text(), 'November 2009', 'After prev clicks');
 	inp.datepicker('hide');
+});
+
+test('Ticket 6827: formatDate day of year calculation is wrong during day lights savings time', function(){
+    var time = $.datepicker.formatDate("oo", new Date("2010/03/30 12:00:00 CDT")); 
+    equals(time, "089");
+});
+
+test('Ticket #7244: date parser does not fail when too many numbers are passed into the date function', function() {
+    expect(1);
+    try{
+        var date = $.datepicker.parseDate('dd/mm/yy', '18/04/19881');
+    }catch(e){
+        ok("invalid date detected");
+    }
 });
 
 })(jQuery);

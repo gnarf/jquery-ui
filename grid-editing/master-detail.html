@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1">
+	<title>Grid: Editing, Master/Detail</title>
+	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
+	<link rel="stylesheet" href="../demos/demos.css">
+	<script src="../jquery-1.5.1.js"></script>
+	<script src="../external/jquery.tmpl.js"></script>
+	<script src="../external/jquery.mousewheel-3.0.4.js"></script>
+	<script src="../ui/jquery.ui.core.js"></script>
+	<script src="../ui/jquery.ui.widget.js"></script>
+	<script src="../ui/jquery.ui.button.js"></script>
+	<script src="localstore.js"></script>
+	<script src="helpers.js"></script>
+	<script>
+	var store = $.demos.localstore( {
+		key: "grid-editing-movies",
+		initial: "movies.json"
+	});
+	var movies = store.load();
+
+	$(function() {
+		$(":submit").button();
+		function save() {
+			store.save( movies );
+			$(store).trigger("update");
+			return this;
+		};
+
+		var movie;
+		var editForm = $( "#editForm" ).hide().submit( function( event ) {
+			event.preventDefault();
+			serializeForm( this, movie );
+			save();
+			editForm.hide();
+		});
+		var list = $("#movies-list").delegate("li:has(li)", "click", function() {
+			movie = $( this ).tmplItem().data;
+			deserializeForm( editForm, movie );
+			editForm.show();
+		});
+		$(store).bind("update", function() {
+			list.empty().append( $("#movie-list-item").tmpl( movies ) );
+		});
+
+		$("#addMovie").click(function() {
+			movies.push({
+				title: "New Movie",
+				alternative_titles: [],
+				languages: [{
+					name: "English"
+				}]
+			});
+			save();
+		});
+
+		$("#editForm").hide();
+
+		$(store).trigger("update");
+	});
+	</script>
+	<style>
+		h1, h2 { padding: .5em; margin: 0; position: relative; }
+		#movies-list { margin: 0; margin-top: -1px; padding-top: 1em; padding-bottom: 1em; }
+		#addMovie { right: 1em; position: absolute; font-size: 0.6em; }
+	</style>
+</head>
+<body>
+
+<h1 class="ui-widget-header">
+	<button id="addMovie">Add movie</button>
+	Non-grid master/details editing
+</h1>
+
+<ul id="movies-list" class="ui-widget ui-widget-content">
+
+</ul>
+
+<script id="movie-list-item" type="text/x-jquery-tmpl">
+	<li>
+		<span>${title}, released ${released}, available in:</span>
+		<ul>
+			{{each(index, language) languages}}
+				<li>${name}</li>
+			{{/each}}
+		</ul>
+	</li>
+</script>
+
+<form id="editForm">
+	<h2 class="ui-widget-header">Edit movie</h2>
+	<fieldset class="ui-widget ui-widget-content">
+		<input type="text" name="title" placeholder="Title" />
+		<input type="text" name="released" placeholder="Release Year" />
+		<!--
+		<input type="text" name="alternative_titles" size="30" placeholder="Alternative Titles" />
+		<input type="text" name="languages" placeholder="Languages" />
+		-->
+		<input type="submit" value="Save changes" />
+	</fieldset>
+</form>
+
+</body>
+</html>
