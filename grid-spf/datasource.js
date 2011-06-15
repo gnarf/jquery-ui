@@ -12,7 +12,10 @@ $.widget( "ui.datasource", {
 	},
 
 	toArray: function() {
-		return this.data;
+		if ( !this._data ) {
+			this._data = [];
+		}
+		return this._data;
 	},
 
 	_setOption: function( key, value ) {
@@ -63,8 +66,8 @@ $.widget( "ui.datasource", {
 			page: this.page()
 		});
 		var that = this;
-        this.options.source( request, function( data, totalCount ) {
-			that.data = data;
+		this.options.source( request, function( data, totalCount ) {
+			$.observable( that.toArray() ).refresh( data );
 			that.totalCount = totalCount;
 			that._trigger( "response" );
 		});
