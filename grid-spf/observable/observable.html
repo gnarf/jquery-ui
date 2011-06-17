@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>Multiple grids and Observable Data</title>
+	<title>Grid with Observable Editable Data</title>
 	<link rel="stylesheet" href="../../themes/base/jquery.ui.all.css"/>
 	<link rel="stylesheet" href="../grid.css"/>
 	<link href="editable.css" rel="stylesheet"/>
@@ -48,7 +48,7 @@
 		$("#addDeveloper" ).click( function () {
 			adding = true;
 			var insertAt = selectedItem ? 
-				$.inArray( selectedItem, developersDataGrid.getViewItems() ) : 
+				$.inArray( selectedItem, developersDataGrid.rowElements() ) : 
 				developersDataSource.toArray().length,
 				addedData = {
 					firstName: "",
@@ -58,7 +58,7 @@
 			$.observable( developersDataSource.toArray() ).insert( insertAt, addedData );
 			adding = false;
 
-			onSelectChange( developersDataGrid.getViewItems()[ insertAt ] );
+			onSelectChange( developersDataGrid.rowElements()[ insertAt ] );
 		});
 
 		$( "#deleteDeveloper" ).click( function () {
@@ -68,8 +68,8 @@
 		$( "#developerDetail" )
 			.delegate( "#okBtn", "click", function () {
 				// Commit entire form content to data model with one API call.
-				var selectedItemData = developersDataGrid.getDataForItem( selectedItem );
-				$.observable( selectedItemData ).setField( $( "#developerDetail input" ).serializeArray() );
+				var selectedItemData = $( selectedItem ).tmplItem().data;
+				$.observable( selectedItemData ).setProperty( $( "#developerDetail input" ).serializeArray() );
 
 				$( "#developerDetail" ).empty();
 			})
@@ -88,7 +88,7 @@
 			if ( newSelectedItem ) {
 				$( newSelectedItem ).addClass( "grid-selected-row");
 
-				var selectedItemData = developersDataGrid.getDataForItem( newSelectedItem );
+				var selectedItemData = $( newSelectedItem ).tmplItem().data;
 				$.tmpl( $("#detailViewTemplate"), selectedItemData )
 					.appendTo( "#developerDetail" );
 			}
@@ -96,12 +96,12 @@
 
 		function deleteSelectedDeveloper() {
 			if ( selectedItem ) {
-				var index = $.inArray( selectedItem, developersDataGrid.getViewItems() );
+				var index = $.inArray( selectedItem, developersDataGrid.rowElements() );
 				$.observable( developersDataSource.toArray() ).remove( index );
 
 				selectedItem = null;
-				var viewItems = developersDataGrid.getViewItems();
-				onSelectChange( index >= viewItems.length ? viewItems[ viewItems.length - 1] : viewItems[ index ] );
+				var rowElements = developersDataGrid.rowElements();
+				onSelectChange( index >= rowElements.length ? rowElements[ rowElements.length - 1] : rowElements[ index ] );
 			}
 		}
 	});

@@ -31,7 +31,6 @@ $.widget( "ui.grid", {
 			that.refresh();
 		});
 		this._changeHandlerKey = ("gridDataChangeHandler" + Math.random()).replace( /\D/g, "" );
-		this._itemForElKey = ("gridItemData" + Math.random()).replace( /\D/g, "" );
 		var arrayChangeHandler = function( event, data ) {
 			that._handleArrayChange( data );
 		};
@@ -44,6 +43,9 @@ $.widget( "ui.grid", {
 		array.unbind( "arrayChange", array.data( this._changeHandlerKey ) );
 	},
 	_handleArrayChange: function( eventData ) {
+		// There is a non-trivial amount of code here devoted to "arrayChange/propertyChange" here
+		// (change handling, event binding, etc).  The JsViews plug-in might be worthwhile here
+		// as it does much of the same work we're doing below (to support incremental re-render).
 		switch ( eventData.change ) {
 			case "insert":
 				var that = this,
@@ -86,32 +88,34 @@ $.widget( "ui.grid", {
 				break;
 		}
 	},
-	_handleFieldChange: function( item, eventData ) {
+	_handlePropertyChange: function( item, eventData ) {
 		var that = this,
 			itemEls = this._getItemsParent().children().filter( function() {
-				return that.getDataForItem( this ) === item;
+				return $( this ).tmplItem().data === item;
 			} );
 		$.each( itemEls, function() {
+			// Here, we re-render the table row for a given property change.
+			// This is a scenario where jQuery data-link would be better, to incrementally
+			// fix up the previously rendered template rather than re-render.
 			that._disposeItemEl( $( this ) );
 			$( this ).replaceWith( that._createElForItem( item ) );
 		} );
 	},
 	_createElForItem: function( item ) {
 		var that = this,
-			fieldChangeHandler = function( event, data ) {
-				that._handleFieldChange( event.target, data );
+			propertyChangeHandler = function( event, data ) {
+				that._handlePropertyChange( event.target, data );
 			};
-		$( item ).bind( "propertyChange", fieldChangeHandler );
+		$( item ).bind( "propertyChange", propertyChangeHandler );
 		return $.tmpl( this.options.rowTemplate, item )
-			.data( this._itemForElKey, item )
-			.data( this._changeHandlerKey, fieldChangeHandler )
+			.data( this._changeHandlerKey, propertyChangeHandler )
 			.find( "td" ).addClass( "ui-widget-content" ).end();
 	},
 	_getItemsParent: function() {
 		return this.element.find( "tbody" );
 	},
 	_disposeItemEl: function( itemEl ) {
-		$( this.getDataForItem( itemEl ) ).unbind( "propertyChange", itemEl.data( this._changeHandlerKey ) );
+		$( itemEl.tmplItem().data ).unbind( "propertyChange", itemEl.data( this._changeHandlerKey ) );
 	},
 	refresh: function() {
 		// TODO this code assumes a single tbody which is not a safe assumption
@@ -135,10 +139,7 @@ $.widget( "ui.grid", {
 		});
 		this._trigger("refresh");
 	},
-	getDataForItem: function ( itemEl ) {
-		return $( itemEl ).data( this._itemForElKey );
-	},
-	getViewItems: function() {
+	rowElements: function() {
 		return this._getItemsParent().children();
 	},
 	
