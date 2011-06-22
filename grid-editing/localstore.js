@@ -54,7 +54,7 @@ $.widget( "demos.localstore", {
 			stored = this.data;
 		}
 		if (!stored) {
-			return this.options.intial;
+			return this.options.initial;
 		}
 		return stored;
 	},

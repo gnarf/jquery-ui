@@ -34,12 +34,12 @@ $.widget( "ui.grid", {
 		var arrayChangeHandler = function( event, data ) {
 			that._handleArrayChange( data );
 		};
-		$( [ this.options.source.toArray() ] )
+		$( [ this.options.source ] )
 			.bind( "arrayChange", arrayChangeHandler )
 			.data( this._changeHandlerKey, arrayChangeHandler );
 	},
 	_destroy: function() {
-		var array = $( [ this.options.source.toArray() ] );
+		var array = $( [ this.options.source ] );
 		array.unbind( "arrayChange", array.data( this._changeHandlerKey ) );
 	},
 	_handleArrayChange: function( eventData ) {
@@ -133,7 +133,7 @@ $.widget( "ui.grid", {
 		// TODO try to replace $.each with passing an array to $.tmpl, produced by this.items.something()
 		// TODO how to refresh a single row?
 		var that = this;
-		$.each( this.options.source.toArray(), function( itemId, item ) {
+		$.each( this.options.source, function( itemId, item ) {
 			// TODO use item.toJSON() or a method like that to compute values to pass to tmpl
 			that._createElForItem( item ).appendTo( tbody );
 		});

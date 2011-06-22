@@ -21,6 +21,8 @@
 	<script src="editor.js"></script>
 	<script src="localstore.js"></script>
 	<script src="helpers.js"></script>
+	<script src="jquery.observable.js"></script>
+	<script src="jquery.datatracker.js"></script>
 	<script>
 	var store = $.demos.localstore( {
 		key: "grid-editing-developers",
@@ -33,26 +35,43 @@
 			input: localDevelopers,
 			paging: {
 				limit: 8
-			},
-			propertychange: function(event, ui) {
-				console.log("field", ui.path, "changed from", ui.oldValue, "to", ui.newValue);
-			},
-			objectchange: function(event, ui) {
-				console.log("developer at index", ui.index, "changed", ui.object);
-				this.save();
-			},
-			change: function(event, ui) {
-				console.log("developer(s) at index", ui.index, ui.change + "ed", ui.items);
-				this.save().refresh();
 			}
 		});
-		developers.save = function() {
-			store.save( localDevelopers );
-			return this;
-		}
+
+		var tracker = $.dataTracker( localDevelopers ),
+			trackerChanged = function() {
+				console.log("saving");
+				store.save( localDevelopers );
+				// We could examine "tracker" to determine what changed here in order
+				// to do an incremental save.
+
+				$( "#developers-local tr" ).removeClass("grid-selected-row").filter(function() {
+					var developer = $( this ).tmplItem().data;
+					return $.inArray(developer, tracker.insertedItems) >= 0 ||
+						$.inArray(developer, tracker.removedItems) >= 0 ||
+						$.inArray(developer, tracker.updatedItems) >= 0;
+				}).addClass("grid-selected-row");
+			};
+		$( [ tracker.insertedItems, tracker.removedItems, tracker.updatedItems ] ).bind( "arrayChange", trackerChanged );
+
+		$( "#developers-inserted" ).grid({
+			selectMode: "none",
+			columns: [ "firstName", "lastName", "country" ],
+			source: tracker.insertedItems
+		});
+		$( "#developers-removed" ).grid({
+			selectMode: "none",
+			columns: [ "firstName", "lastName", "country" ],
+			source: tracker.removedItems
+		});
+		$( "#developers-updated" ).grid({
+			selectMode: "none",
+			columns: [ "firstName", "lastName", "country" ],
+			source: tracker.updatedItems
+		});
 
 		var grid = $.ui.grid( {
-			source: developers,
+			source: developers.toArray(),
 			refresh: function() {
 				$( this ).find( "td:not(:has(button))" ).each( function() {
 					var th = $( this ).parents( "table:first" ).find( "th" ).eq( this.cellIndex ),
@@ -62,15 +81,7 @@
 						submit: function( event, ui ) {
 							var object = $( this ).tmplItem().data;
 							var oldValue = get(object, field);
-							set(object, field, ui.value);
-							developers._trigger("propertychange", event, {
-								path: field,
-								oldValue: oldValue,
-								newValue: ui.value
-							});
-							developers._trigger("objectchange", event, {
-								object: object
-							});
+							$.observable( object ).setProperty( field, ui.value );
 						}
 					});
 				});
@@ -82,35 +93,28 @@
 			+ "<button class='edit'>Edit</button></td>"
 			+ "<td><button class='remove'>Remove</button></td></tr>";
 
-		var developer, tmplItem;
+		var developer;
 		var editForm = $( "#editForm" ).hide().submit( function( event ) {
 			event.preventDefault();
-			serializeForm( this, developer );
-			// TODO the ui-widget class is added after rendering the template by the grid
-			// therefore just rerendering the row looks bad, need to update the template to include the classes
-			// or extend the grid to refresh a single row - need that anyway, as currently the inline editor breaks
-			tmplItem.update();
-			developers._trigger("objectchange", event, {
-				index: localDevelopers.indexOf(developer),
-				object: developer
-			});
+			$.observable( developer ).setProperty( $( this ).serializeArray() );
 			editForm.hide();
 		});
 		grid.element.delegate( "button.edit", "click", function() {
-			tmplItem = $( this ).tmplItem();
-			developer = tmplItem.data;
+			developer = $( this ).tmplItem().data;
 			$( "#edit-tmpl" ).tmpl( meta(developer) ).appendTo( editForm.find("fieldset").empty() );
 			editForm.show();
 		});
 		grid.element.delegate( "button.remove", "click", function() {
 			var developer = $( this ).tmplItem().data;
 			var index = localDevelopers.indexOf( developer );
-			localDevelopers.splice( index, 1 );
-			developers._trigger("change", event, {
-				change: "remove",
-				index: index,
-				items: [ developer ]
-			});
+			$.observable( localDevelopers ).remove( index );
+
+			// This could be treated differently.  We could change the localDataSource impl
+			// to listen for "arrayChange" on its input and automatically do this refresh.
+			// App code could similiarly listen on "arrayChange" on localDevelopers to refresh.
+			// The benefit of these alternatives is that they work if localDevelopers is
+			// changed by code that isn't this handler.
+			developers.refresh();
 		});
 
 		$( "#pageDevelopers" ).pager({
@@ -119,7 +123,7 @@
 
 		$( "#addDeveloper" ).click( function() {
 			// add at front so that it becomes visible without paging
-			localDevelopers.unshift({
+			$.observable( localDevelopers ).insert( 0, {
 				firstName: "Peter",
 				lastName: "Pan",
 				country: "Unknown",
@@ -128,11 +132,9 @@
 					value: 0
 				}
 			});
-			developers._trigger("change", event, {
-				change: "insert",
-				index: 0,
-				items: [localDevelopers[0]]
-			});
+
+			// See refresh comment above.
+			developers.refresh();
 		});
 
 		$("form").tooltip();
@@ -146,6 +148,8 @@
 <body>
 
 <h1>Grids with editable local datasource</h1>
+
+<div style="float: left;">
 
 <h2>local data source</h2>
 <p id="pageDevelopers">
@@ -184,6 +188,57 @@
 	</fieldset>
 	<input type="submit" value="Save changes" />
 </form>
+
+</div>
+
+<div style="float: right;">
+
+<h1>Change-tracking</h1>
+
+<h2>Inserted developers</h2>
+
+<table id="developers-inserted">
+	<thead>
+		<tr>
+			<th data-field="firstName">First Name</th>
+			<th data-field="lastName">Last Name</th>
+			<th data-field="country">Country</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+
+<h2>Removed developers</h2>
+
+<table id="developers-removed">
+	<thead>
+		<tr>
+			<th data-field="firstName">First Name</th>
+			<th data-field="lastName">Last Name</th>
+			<th data-field="country">Country</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+
+<h2>Updated developers</h2>
+
+<table id="developers-updated">
+	<thead>
+		<tr>
+			<th data-field="firstName">First Name</th>
+			<th data-field="lastName">Last Name</th>
+			<th data-field="country">Country</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+
+</div>
+
 <script id="edit-tmpl" type="text/x-jquery-tmpl">
 {{if $.isArray(value)}}
 	<ul>
