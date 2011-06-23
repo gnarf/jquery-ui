@@ -27,9 +27,6 @@ $.widget( "ui.grid", {
 				selected: this
 			});
 		});
-		$(this.options.source).bind("datasourceresponse", function() {
-			that.refresh();
-		});
 		this._changeHandlerKey = ("gridDataChangeHandler" + Math.random()).replace( /\D/g, "" );
 		var arrayChangeHandler = function( event, data ) {
 			that._handleArrayChange( data );
@@ -37,6 +34,7 @@ $.widget( "ui.grid", {
 		$( [ this.options.source ] )
 			.bind( "arrayChange", arrayChangeHandler )
 			.data( this._changeHandlerKey, arrayChangeHandler );
+		this.refresh();
 	},
 	_destroy: function() {
 		var array = $( [ this.options.source ] );

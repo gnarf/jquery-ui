@@ -19,7 +19,7 @@
 
 	<script>
 
-	var developers, developersDataSource, developersDataGrid, selectedItem, adding = false;
+	var developers, developersDataGrid, selectedItem, adding = false;
 	$.ajax({
 		dataType: "json",
 		url: "../developers.json",
@@ -30,32 +30,26 @@
 	});
 
 	$( function() {
-		developersDataSource = $.ui.localDatasource({
-			input: developers
-		});
-
 		developersDataGrid = $( "#developers-data" ).grid({
 			selectMode: "single",
 			columns: [ "firstName", "lastName", "country" ],
-			source: developersDataSource,
+			source: developers,
 			select: function( event, args ) {
 				onSelectChange( args.selected );
 			}
 		}).data( "grid" );
 
-		developersDataSource.refresh();
-
 		$("#addDeveloper" ).click( function () {
 			adding = true;
 			var insertAt = selectedItem ? 
 				$.inArray( selectedItem, developersDataGrid.rowElements() ) : 
-				developersDataSource.toArray().length,
+				developers.length,
 				addedData = {
 					firstName: "",
 					lastName: "",
 					country: ""
 				};
-			$.observable( developersDataSource.toArray() ).insert( insertAt, addedData );
+			$.observable( developers ).insert( insertAt, addedData );
 			adding = false;
 
 			onSelectChange( developersDataGrid.rowElements()[ insertAt ] );
