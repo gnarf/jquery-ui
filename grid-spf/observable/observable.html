@@ -35,14 +35,14 @@
 			columns: [ "firstName", "lastName", "country" ],
 			source: developers,
 			select: function( event, args ) {
-				onSelectChange( args.selected );
+				onSelectionChange( $( args.selected ).tmplItem().data );
 			}
 		}).data( "grid" );
 
 		$("#addDeveloper" ).click( function () {
 			adding = true;
 			var insertAt = selectedItem ? 
-				$.inArray( selectedItem, developersDataGrid.rowElements() ) : 
+				$.inArray( selectedItem, developers ) : 
 				developers.length,
 				addedData = {
 					firstName: "",
@@ -52,7 +52,7 @@
 			$.observable( developers ).insert( insertAt, addedData );
 			adding = false;
 
-			onSelectChange( developersDataGrid.rowElements()[ insertAt ] );
+			onSelectionChange( addedData );
 		});
 
 		$( "#deleteDeveloper" ).click( function () {
@@ -62,40 +62,49 @@
 		$( "#developerDetail" )
 			.delegate( "#okBtn", "click", function () {
 				// Commit entire form content to data model with one API call.
-				var selectedItemData = $( selectedItem ).tmplItem().data;
-				$.observable( selectedItemData ).setProperty( $( "#developerDetail input" ).serializeArray() );
+				$.observable( selectedItem ).setProperty( $( "#developerDetail input" ).serializeArray() );
 
 				$( "#developerDetail" ).empty();
+
+				// The grid currently re-renders a row even for property updates, so we lose selection
+				// styling here and need to explicitly reapply.
+				var selectedItemEl = $.grep( developersDataGrid.rowElements(), function( itemEl ) {
+					return $( itemEl ).tmplItem().data === selectedItem;
+				} )[ 0 ];
+				$( selectedItemEl ).addClass( "grid-selected-row");
 			})
 			.delegate( "#deleteBtn", "click", function () {
 				deleteSelectedDeveloper();
 			});
 
-		function onSelectChange( newSelectedItem ) {
+		function onSelectionChange( newSelectedItem ) {
 			if ( selectedItem ) {
-				$( selectedItem ).removeClass( "grid-selected-row" );
+				var selectedItemEl = $.grep( developersDataGrid.rowElements(), function( itemEl ) {
+					return $( itemEl ).tmplItem().data === selectedItem;
+				} )[ 0 ];
+				$( selectedItemEl ).removeClass( "grid-selected-row" );
 			}
 
 			selectedItem = newSelectedItem;
 			$( "#developerDetail" ).empty();
 
 			if ( newSelectedItem ) {
-				$( newSelectedItem ).addClass( "grid-selected-row");
+				var newSelectedItemEl = $.grep( developersDataGrid.rowElements(), function( itemEl ) {
+					return $( itemEl ).tmplItem().data === newSelectedItem;
+				} )[ 0 ];
+				$( newSelectedItemEl ).addClass( "grid-selected-row");
 
-				var selectedItemData = $( newSelectedItem ).tmplItem().data;
-				$.tmpl( $("#detailViewTemplate"), selectedItemData )
+				$.tmpl( $("#detailViewTemplate"), newSelectedItem )
 					.appendTo( "#developerDetail" );
 			}
 		}
 
 		function deleteSelectedDeveloper() {
 			if ( selectedItem ) {
-				var index = $.inArray( selectedItem, developersDataGrid.rowElements() );
+				var index = $.inArray( selectedItem, developers );
 				$.observable( developers ).remove( index );
 
-				selectedItem = null;
-				var rowElements = developersDataGrid.rowElements();
-				onSelectChange( index >= rowElements.length ? rowElements[ rowElements.length - 1] : rowElements[ index ] );
+				onSelectionChange( index >= developers.length ? developers[ developers.length - 1 ] : developers[ index ] );
 			}
 		}
 	});
