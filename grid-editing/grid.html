@@ -40,7 +40,9 @@
 
 		var tracker = $.dataTracker( localDevelopers ),
 			trackerChanged = function() {
-				console.log("saving");
+				if ( typeof( console ) !== "undefined" ) {
+					console.log("saving");
+				}
 				store.save( localDevelopers );
 				// We could examine "tracker" to determine what changed here in order
 				// to do an incremental save.
@@ -109,9 +111,13 @@
 			editForm.show();
 		});
 		grid.element.delegate( "button.remove", "click", function() {
-			var developer = $( this ).tmplItem().data;
-			var index = localDevelopers.indexOf( developer );
+			var developerToRemove = $( this ).tmplItem().data;
+			var index = localDevelopers.indexOf( developerToRemove );
 			$.observable( localDevelopers ).remove( index );
+
+			if ( developerToRemove === developer ) {
+				editForm.hide();
+			}
 
 			// This could be treated differently.  We could change the localDataSource impl
 			// to listen for "arrayChange" on its input and automatically do this refresh.
