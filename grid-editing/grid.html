@@ -38,39 +38,10 @@
 			}
 		});
 
-		var changedClass = "grid-selected-row";
-
-		var tracker = $.dataTracker( localDevelopers ),
-			trackerChanged = function() {
-				console.log("saving");
-				store.save( localDevelopers );
-				// We could examine "tracker" to determine what changed here in order
-				// to do an incremental save.
-
-				styleChangedRows($( "#developers-local tr" ));
-			};
-		$( [ tracker.insertedItems, tracker.removedItems, tracker.updatedItems ] ).bind( "arrayChange", trackerChanged );
-
-		$( "#developers-inserted" ).grid({
-			selectMode: "none",
-			columns: [ "firstName", "lastName", "country" ],
-			source: tracker.insertedItems
-		});
-		$( "#developers-removed" ).grid({
-			selectMode: "none",
-			columns: [ "firstName", "lastName", "country" ],
-			source: tracker.removedItems
-		});
-		$( "#developers-updated" ).grid({
-			selectMode: "none",
-			columns: [ "firstName", "lastName", "country" ],
-			source: tracker.updatedItems
-		});
-
 		var grid = $.ui.grid( {
 			source: developers.toArray(),
-			refresh: function() {
-				$( this ).find( "td:not(:has(button))" ).each( function() {
+			rowAdded: function( event, elem ) {
+				$( elem ).find( "td:not(:has(button))" ).each( function() {
 					var th = $( this ).parents( "table:first" ).find( "th" ).eq( this.cellIndex ),
 						field = th.data( "field" );
 					$( this ).editor({
@@ -82,9 +53,12 @@
 						}
 					});
 				});
-			},
-			rowAdded: function( event, elem ) {
+
 				styleChangedRows( $( elem ) );
+				// We can be sure that data-tracker has accurately tracked changes to localDevelopers
+				// by the time this event is issued (due to a localDevelopers change).
+				// Data-tracker hooks $.observable to ensure it can synchronize its state before data
+				// change events are issued.
 			}
 		}, "#developers-local" );
 
@@ -139,9 +113,40 @@
 
 		$("form").tooltip();
 
+		var tracker = $.dataTracker( localDevelopers ),
+			trackerChanged = function() {
+				console.log("saving");
+				store.save( localDevelopers );
+				// We could examine "tracker" to determine what changed here in order
+				// to do an incremental save.
+
+				styleChangedRows($( "#developers-local tr" ));
+				// We can be sure that this selector is in sync with localDevelopers, since
+				// the data-tracker issues its events _after_ any changes to localDevelopers.
+				// Data-tracker does this by hooking $.observable.
+			};
+		$( [ tracker.insertedItems, tracker.removedItems, tracker.updatedItems ] ).bind( "arrayChange", trackerChanged );
+
+		$( "#developers-inserted" ).grid({
+			selectMode: "none",
+			columns: [ "firstName", "lastName", "country" ],
+			source: tracker.insertedItems
+		});
+		$( "#developers-removed" ).grid({
+			selectMode: "none",
+			columns: [ "firstName", "lastName", "country" ],
+			source: tracker.removedItems
+		});
+		$( "#developers-updated" ).grid({
+			selectMode: "none",
+			columns: [ "firstName", "lastName", "country" ],
+			source: tracker.updatedItems
+		});
+
 		developers.refresh();
 
 		function styleChangedRows( rows ) {
+			var changedClass = "grid-selected-row";
 			rows.removeClass( changedClass ).filter( function() {
 				var developer = $( this ).tmplItem().data;
 				return $.inArray( developer, tracker.insertedItems ) >= 0 ||
