@@ -38,6 +38,36 @@
 			}
 		});
 
+		var tracker = $.dataTracker( localDevelopers ),
+			trackerChanged = function() {
+				console.log("saving");
+				store.save( localDevelopers );
+				// We could examine "tracker" to determine what changed here in order
+				// to do an incremental save.
+
+				styleChangedRows($( "#developers-local tr" ));
+				// We can be sure that this selector is in sync with localDevelopers, since
+				// the data-tracker issues its events _after_ any changes to localDevelopers.
+				// Data-tracker does this by hooking $.observable.
+			};
+		$( [ tracker.insertedItems, tracker.removedItems, tracker.updatedItems ] ).bind( "arrayChange", trackerChanged );
+
+		$( "#developers-inserted" ).grid({
+			selectMode: "none",
+			columns: [ "firstName", "lastName", "country" ],
+			source: tracker.insertedItems
+		});
+		$( "#developers-removed" ).grid({
+			selectMode: "none",
+			columns: [ "firstName", "lastName", "country" ],
+			source: tracker.removedItems
+		});
+		$( "#developers-updated" ).grid({
+			selectMode: "none",
+			columns: [ "firstName", "lastName", "country" ],
+			source: tracker.updatedItems
+		});
+
 		var grid = $.ui.grid( {
 			source: developers.toArray(),
 			rowAdded: function( event, elem ) {
@@ -112,36 +142,6 @@
 		});
 
 		$("form").tooltip();
-
-		var tracker = $.dataTracker( localDevelopers ),
-			trackerChanged = function() {
-				console.log("saving");
-				store.save( localDevelopers );
-				// We could examine "tracker" to determine what changed here in order
-				// to do an incremental save.
-
-				styleChangedRows($( "#developers-local tr" ));
-				// We can be sure that this selector is in sync with localDevelopers, since
-				// the data-tracker issues its events _after_ any changes to localDevelopers.
-				// Data-tracker does this by hooking $.observable.
-			};
-		$( [ tracker.insertedItems, tracker.removedItems, tracker.updatedItems ] ).bind( "arrayChange", trackerChanged );
-
-		$( "#developers-inserted" ).grid({
-			selectMode: "none",
-			columns: [ "firstName", "lastName", "country" ],
-			source: tracker.insertedItems
-		});
-		$( "#developers-removed" ).grid({
-			selectMode: "none",
-			columns: [ "firstName", "lastName", "country" ],
-			source: tracker.removedItems
-		});
-		$( "#developers-updated" ).grid({
-			selectMode: "none",
-			columns: [ "firstName", "lastName", "country" ],
-			source: tracker.updatedItems
-		});
 
 		developers.refresh();
 

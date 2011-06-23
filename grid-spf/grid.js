@@ -136,7 +136,7 @@ $.widget( "ui.grid", {
 		// TODO try to replace $.each with passing an array to $.tmpl, produced by this.items.something()
 		// TODO how to refresh a single row?
 		var that = this;
-		$.each( this.options.source, function( itemId, item ) {
+		$.each( this.options.source, function( unused, item ) {
 			// TODO use item.toJSON() or a method like that to compute values to pass to tmpl
 			var newEl = that._createElForItem( item ).appendTo( tbody );
 			that._trigger( "rowAdded", null, newEl[0] );
