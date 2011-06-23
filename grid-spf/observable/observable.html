@@ -91,7 +91,7 @@
 		function deleteSelectedDeveloper() {
 			if ( selectedItem ) {
 				var index = $.inArray( selectedItem, developersDataGrid.rowElements() );
-				$.observable( developersDataSource.toArray() ).remove( index );
+				$.observable( developers ).remove( index );
 
 				selectedItem = null;
 				var rowElements = developersDataGrid.rowElements();
