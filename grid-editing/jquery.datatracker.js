@@ -10,6 +10,7 @@
 		this.removedItems = [];
 
 		this._array = data;
+		this._deferredEvents = [];
 
 		this._makeArrayObservable( this._array );
 
@@ -21,6 +22,7 @@
 
 	$.dataTracker.prototype = {
 		_array: null,
+		_deferredEvents: null,
 
 		updatedItems: null,
 		insertedItems: null,
@@ -36,66 +38,103 @@
 		_makeArrayObservable: function ( array ) {
 			var that = this;
 			$.observable.extend( array, {
-				insert: {
-					before: function() {
-						var items = Array.prototype.slice.call( arguments, 1 );
-						$.each( items, function( unused, item ) {
-							var removedIndex = $.inArray( item, that.removedItems );
-							if ( removedIndex >= 0 ) {
-								$.observable( that.removedItems ).remove( removedIndex );
-							} else {
-								if ( $.inArray( item, that.insertedItems ) < 0 ) {
-									that._makeItemObservable( item );
-									$.observable( that.insertedItems ).insert( that.insertedItems.length, item );
-								}
-							}
-						} );
-					}
-				},
-				remove: {
-					before: function( index, numToRemove ) {
-						numToRemove = ( numToRemove === undefined || numToRemove === null ) ? 1 : numToRemove;
-						var removedItems = this.data().slice( index, index + numToRemove );
-						$.each( removedItems, function( unused, item ) {
-							var insertedIndex = $.inArray( item, that.insertedItems );
-							if ( insertedIndex >= 0 ) {
-								$.observable( that.insertedItems ).remove( insertedIndex );
-							} else {
-								if ( $.inArray( item, that.removedItems ) < 0 ) {
-									$.observable( that.removedItems ).insert( that.removedItems.length, item );
-								}
-							}
-						} );
-					}
-				},
-				refresh: {
-					before: function( newItems ) {
-						var insertedItems = $.grep( newItems, function() {
-								return $.inArray( this, this.data() ) < 0 && $.inArray( this, that.insertedItems ) < 0;
-							} ),
-							insertedItemsObservable = $.observable( that.insertedItems );
-						insertedItemsObservable.insert.apply( insertedItemsObservable, [ that.insertedItems.length ].concat( insertedItems ) );
+				afterChange: function( target, type, data ) {
+					switch( data.change ) {
+						case "insert":
+							that._trackInsertedItems( data.items );
+							break;
 
-						var removedItems = $.grep( this.data(), function() {
-								return $.inArray( this, newItems ) < 0;
-							} ),
-							removedItemsObservable = $.observable( that.removedItems );
-						removedItemsObservable.insert.apply( removedItemsObservable, [ that.removedItems.length ].concat( removedItems ) );
+						case "remove":
+							that._trackRemovedItems( data.items );
+							break;
+
+						case "refresh":
+							var oldItems = data.oldItems,
+								newItems = data.newItems;
+
+							var insertedItems = $.grep( newItems, function() {
+									return $.inArray( this, oldItems ) < 0;
+								} );
+							that._trackInsertedItems( insertedItems );
+
+							var removedItems = $.grep( oldItems, function() {
+									return $.inArray( this, newItems ) < 0;
+								} );
+							that._trackRemovedItems( removedItems );
+							break;
 					}
-				}				
+				},
+				afterEvents: function() {
+					that._triggerDeferredEvents();
+				}		
 			});
+		},
+
+		_trackInsertedItems: function ( items ) {
+			var that = this;
+			$.each( items, function( unused, item ) {
+				var removedIndex = $.inArray( item, that.removedItems );
+				if ( removedIndex >= 0 ) {
+					that._removeItemAndDeferEvent( that.removedItems, removedIndex );
+				} else {
+					if ( $.inArray( item, that.insertedItems ) < 0 ) {
+						that._makeItemObservable( item );
+						that._pushItemAndDeferEvent( that.insertedItems, item );
+					}
+				}
+			} );
+		},
+
+		_trackRemovedItems: function ( items ) {
+			var that = this;
+			$.each( items, function( unused, item ) {
+				var insertedIndex = $.inArray( item, that.insertedItems );
+				if ( insertedIndex >= 0 ) {
+					that._removeItemAndDeferEvent( that.insertedItems, insertedIndex );
+				} else {
+					if ( $.inArray( item, that.removedItems ) < 0 ) {
+						that._pushItemAndDeferEvent( that.removedItems, item );
+					}
+				}
+			} );
 		},
 
 		_makeItemObservable: function( item ) {
 			var that = this;
 			$.observable.extend( item, {
-				before: function() {
+				afterChange: function( target, type, data ) {
 					if ( $.inArray( item, that.insertedItems ) < 0 &&
 						$.inArray( item, that.updatedItems ) < 0 ) {
-						$.observable( that.updatedItems ).insert( that.updatedItems.length, item );
+						that._pushItemAndDeferEvent( that.updatedItems, item );
 					}
+				},
+				afterEvents: function() {
+					that._triggerDeferredEvents();
 				}
 			});
+		},
+
+		_pushItemAndDeferEvent: function( array, item ) {
+			var index = array.length;
+			array.push( item );
+			this._deferredEvents.push( function() {
+				$( [ array ] ).triggerHandler( "arrayChange", { change: "insert", index: index, items: [ item ] } );
+			} );
+		},
+
+		_removeItemAndDeferEvent: function( array, index ) {
+			var items = array.slice( index, index + 1 );
+			array.splice( index, 1 );
+			this._deferredEvents.push( function() {
+				$( [ array ] ).triggerHandler( "arrayChange", { change: "remove", index: index, items: items } );
+			} );
+		},
+
+		_triggerDeferredEvents: function() {
+				$.each(this._deferredEvents, function() {
+					this();
+				} );
+				this._deferredEvents.splice(0, this._deferredEvents.length);
 		}
 	};
 } )( jQuery )

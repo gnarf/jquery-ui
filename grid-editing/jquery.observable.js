@@ -21,23 +21,9 @@
 		if ( options ) {
 			factory = function( data ) {
 				var observable = createObservable( data );
-				if ( options.before || options.after ) {
-					$.each( observable, function( name, fn ) {
-						if ( !( name[0] === "_" || name === "data" ) ) {
-							replaceObservableFunction( observable, name, options.before, options.after, 
-								function( args ) { return [ name, args ]; } );
-						}
-					} );
-				}
-				$.each( options, function( name, value ) {
-					if ( !(name === "before" || name === "after") ) {
-						if ( $.isFunction( value ) ) {
-							observable[ name ] = value;
-						} else {
-							replaceObservableFunction( observable, name, value.before, value.after );
-						}
-					}
-				} );
+				observable._beforeChange = options.beforeChange;
+				observable._afterChange = options.afterChange;
+				observable._afterEvents = options.afterEvents;
 				return observable;
 			};
 		}
@@ -86,12 +72,15 @@
 				path = leaf[1];
 				leaf = leaf[0];
 				if ( leaf && (leaf[ path ] !== value )) {
-					leaf[ path ] = value;
-					$( object ).triggerHandler( "propertyChange", { path: path, value: value } );
+					var changeFn = function() {
+							leaf[ path ] = value;
+						},
+						eventData = { path: path, value: value };
+					changeDataAndTriggerEvents( this, changeFn, $( object ), "propertyChange", eventData );
 				}
 			}
 			return this; 
-		} 
+		}
 	};
 
 	function getLeafObject( object, path ) {
@@ -107,18 +96,18 @@
 		return [];
 	};
 
-	var ObservableArray = function( data ) {
+	var ArrayObservable = function( data ) {
 		if ( !this.data ) {
-			return new ObservableArray( data );
+			return new ArrayObservable( data );
 		}
 
 		this._data = data;
 		return this;
 	};
 
-	$.observable.Array = ObservableArray;
+	$.observable.Array = ArrayObservable;
 
-	ObservableArray.prototype = {
+	ArrayObservable.prototype = {
 		_data: null,
 
 		data: function() {
@@ -128,59 +117,82 @@
 		insert: function( index ) {
 			var items = Array.prototype.slice.call( arguments, 1 );
 			if ( items.length > 0 ) {
-				Array.prototype.splice.apply( this._data, [ index, 0 ].concat( items ) );
-				this._triggerEvent( { change: "insert", index: index, items: items } );
+				var that = this,
+					changeFn = function() {
+						Array.prototype.splice.apply( that._data, [ index, 0 ].concat( items ) );
+					},
+					eventData = { change: "insert", index: index, items: items };
+				this._changeDataAndTriggerEvents( changeFn, eventData );
 			}
 		},
 
 		remove: function( index, numToRemove ) {
 			numToRemove = ( numToRemove === undefined || numToRemove === null ) ? 1 : numToRemove;
 			if ( numToRemove ) {
-				var items = this._data.slice( index, index + numToRemove );
-				this._data.splice( index, numToRemove );
-				this._triggerEvent( { change: "remove", index: index, items: items } );
+				var that = this,
+					changeFn = function() {
+						that._data.splice( index, numToRemove );
+					},
+					items = this._data.slice( index, index + numToRemove ),
+					eventData = { change: "remove", index: index, items: items };
+				this._changeDataAndTriggerEvents( changeFn, eventData );
 			}
 		},
 
 		move: function( oldIndex, newIndex, numToMove ) {
 			numToMove = ( numToMove === undefined || numToMove === null ) ? 1 : numToMove;
 			if ( numToMove ) {
-				var items = this._data.slice( oldIndex, oldIndex + numToMove );
-				var observable = $.observable( this._data );
-				this._triggerEvent( { change: "move", oldIndex: oldIndex, newIndex: newIndex, items: items } );
+				var that = this,
+					items = this._data.slice( oldIndex, oldIndex + numToMove ),
+					changeFn = function() {
+						that._data.splice( oldIndex, numToMove );
+						that._data.splice.apply( that._data, [ newIndex, 0 ].concat( items ) );
+					},
+					eventData = { change: "move", oldIndex: oldIndex, newIndex: newIndex, items: items };
+				this._changeDataAndTriggerEvents( changeFn, eventData );
 			}
 		},
 
 		refresh: function( newItems ) {
-			Array.prototype.splice.apply( this._data, [ 0, this._data.length ].concat( newItems ) );
-			this._triggerEvent( { change: "refresh" } );
+			var that = this,
+				changeFn = function() {
+					that._data.splice.apply( that._data, [ 0, that._data.length ].concat( newItems ) );
+				},
+				eventData = { change: "refresh", oldItems: this._data.slice( 0 ), newItems: newItems };
+			this._changeDataAndTriggerEvents( changeFn, eventData );
 		},
 
-		_triggerEvent: function( data ) {
-			$( [ this._data ] ).triggerHandler( "arrayChange", data );
+		_changeDataAndTriggerEvents: function( changeFn, eventData ) {
+			changeDataAndTriggerEvents( this, changeFn, $( [ this._data ] ), "arrayChange", eventData );
 		}
 	};
 
 	function createObservable( data ) {
 		return $.isArray( data )
-			? new ObservableArray( data )
+			? new ArrayObservable( data )
 			: new ObjectObservable( data );
 		// To handle non-Array-typed collections, we could allow developers to
 		// customize this logic.
 	};
 
-	function replaceObservableFunction( observable, name, beforeFn, afterFn, getArguments ) {
-		var baseFn = observable[ name ];
-		observable[ name ] = function() {
-			var args = getArguments ? getArguments( arguments ) : arguments;
-			if ( beforeFn ) {
-				beforeFn.apply( observable, args );
-			}
-			baseFn.apply( observable, arguments );
-			if ( afterFn ) {
-				afterFn.apply( observable, args );
-			}
-		};
+	function changeDataAndTriggerEvents( observable, change, $target, type, data ) {
+		var target = $target[0];
+
+		if ( observable._beforeChange ) {
+			observable._beforeChange.call( observable, target, type, data );
+		}
+
+		change();
+
+		if ( observable._afterChange ) {
+			observable._afterChange.call( observable, target, type, data );
+		}
+
+		$target.triggerHandler( type, data );
+
+		if ( observable._afterEvents ) {
+			observable._afterEvents.call( observable, target, type, data );
+		}
 	};
 
 })(jQuery);

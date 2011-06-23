@@ -58,6 +58,9 @@ $.widget( "ui.grid", {
 				} else {
 					$( newItemEls ).insertAfter( tbody.children().eq( eventData.index - 1 ) );
 				}
+				$.each( newItemEls, function() {
+					that._trigger( "rowAdded", null, this[0] );
+				} );
 				break;
 
 			case "remove":
@@ -98,7 +101,9 @@ $.widget( "ui.grid", {
 			// This is a scenario where jQuery data-link would be better, to incrementally
 			// fix up the previously rendered template rather than re-render.
 			that._disposeItemEl( $( this ) );
-			$( this ).replaceWith( that._createElForItem( item ) );
+			var newEl = that._createElForItem( item );
+			$( this ).replaceWith( newEl );
+			that._trigger( "rowAdded", null, newEl[0] );
 		} );
 	},
 	_createElForItem: function( item ) {
@@ -135,7 +140,8 @@ $.widget( "ui.grid", {
 		var that = this;
 		$.each( this.options.source, function( itemId, item ) {
 			// TODO use item.toJSON() or a method like that to compute values to pass to tmpl
-			that._createElForItem( item ).appendTo( tbody );
+			var newEl = that._createElForItem( item ).appendTo( tbody );
+			that._trigger( "rowAdded", null, newEl[0] );
 		});
 		this._trigger("refresh");
 	},

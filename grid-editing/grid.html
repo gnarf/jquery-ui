@@ -38,6 +38,8 @@
 			}
 		});
 
+		var changedClass = "grid-selected-row";
+
 		var tracker = $.dataTracker( localDevelopers ),
 			trackerChanged = function() {
 				console.log("saving");
@@ -45,12 +47,7 @@
 				// We could examine "tracker" to determine what changed here in order
 				// to do an incremental save.
 
-				$( "#developers-local tr" ).removeClass("grid-selected-row").filter(function() {
-					var developer = $( this ).tmplItem().data;
-					return $.inArray(developer, tracker.insertedItems) >= 0 ||
-						$.inArray(developer, tracker.removedItems) >= 0 ||
-						$.inArray(developer, tracker.updatedItems) >= 0;
-				}).addClass("grid-selected-row");
+				styleChangedRows($( "#developers-local tr" ));
 			};
 		$( [ tracker.insertedItems, tracker.removedItems, tracker.updatedItems ] ).bind( "arrayChange", trackerChanged );
 
@@ -85,6 +82,9 @@
 						}
 					});
 				});
+			},
+			rowAdded: function( event, elem ) {
+				styleChangedRows( $( elem ) );
 			}
 		}, "#developers-local" );
 
@@ -140,6 +140,15 @@
 		$("form").tooltip();
 
 		developers.refresh();
+
+		function styleChangedRows( rows ) {
+			rows.removeClass( changedClass ).filter( function() {
+				var developer = $( this ).tmplItem().data;
+				return $.inArray( developer, tracker.insertedItems ) >= 0 ||
+					$.inArray( developer, tracker.removedItems ) >= 0 ||
+					$.inArray( developer, tracker.updatedItems ) >= 0;
+			}).addClass( changedClass );
+		};
 	});
 	</script>
 	<style>
