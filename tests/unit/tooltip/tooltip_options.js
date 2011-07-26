@@ -63,11 +63,111 @@ test( "items", function() {
 });
 
 test( "tooltipClass", function() {
-	expect( 1 )
+	expect( 1 );
 	var element = $( "#tooltipped1" ).tooltip({
 		tooltipClass: "custom"
 	}).tooltip( "open" );
 	ok( $( "#" + element.attr( "aria-describedby" ) ).hasClass( "custom" ) );
+});
+
+
+asyncTest( "hide/show ui effect", function() {
+	expect( 4 );
+
+	// part 1 - simple ui effect name
+	var element = $( "#tooltipped1" ).tooltip({
+			show: "testEffect",
+			hide: "testEffect"
+		}),
+		currentState;
+
+	function openClose() {
+
+		currentState = "show";
+		element.tooltip( "open" );
+
+		currentState = "hide";
+		element.tooltip( "close" );
+
+	}
+
+	$.effects.effect.testEffect = function( options, next ) {
+		equal( options.mode, currentState, "Effect mode is current state" );
+
+		// perform a simple show/hide
+		$( this )[ options.mode ]();
+		next();
+	};
+
+	openClose();
+
+	// part 2 - ui effect with options
+	element.tooltip( "destroy" );
+	element.tooltip({
+		show: {
+			effect: "testEffectOptions",
+			option: "show",
+			duration: 0
+		},
+		hide: {
+			effect: "testEffectOptions",
+			option: "hide",
+			duration: 0
+		}
+	});
+
+	$.effects.effect.testEffectOptions = function( options, next ) {
+		equal( options.mode, options.option, "Effect options passed correctly" );
+
+		// perform a simple show/hide
+		$( this )[ options.mode ]();
+		next();
+	};
+
+	openClose();
+
+	delete $.effects.effect.testEffect;
+	delete $.effects.effect.testEffectOptions;
+	element.tooltip( "destroy" );
+	element.queue( start );
+
+});
+
+asyncTest( "hide/show - base jQuery function", function() {
+	expect( 2 );
+
+	// part 1 - simple ui effect name
+	var element = $( "#tooltipped1" ).tooltip({
+			show: "testIn",
+			hide: "testOut"
+		}),
+		currentState;
+
+	function openClose() {
+
+		currentState = "show";
+		element.tooltip( "open" );
+
+		currentState = "hide";
+		element.tooltip( "close" );
+
+	}
+
+	$.fn.testIn = function( duration, easing, callback ) {
+		equal( currentState, "show", "Opening widget called correct function" );
+		return this.show();
+	};
+
+	$.fn.testOut = function( duration, easing, callback ) {
+		equal( currentState, "hide", "Closing widget called correct function" );
+		return this.hide();
+	};
+
+	openClose();
+	delete $.fn.testIn;
+	delete $.fn.testOut;
+	element.tooltip( "destroy" );
+	element.queue( start );
 });
 
 }( jQuery ) );
