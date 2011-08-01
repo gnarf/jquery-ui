@@ -64,7 +64,7 @@
 							break;
 					}
 				},
-				afterEvents: function() {
+				afterEvent: function() {
 					that._triggerDeferredEvents();
 				}		
 			});
@@ -108,7 +108,7 @@
 						that._pushItemAndDeferEvent( that.updatedItems, item );
 					}
 				},
-				afterEvents: function() {
+				afterEvent: function() {
 					that._triggerDeferredEvents();
 				}
 			});

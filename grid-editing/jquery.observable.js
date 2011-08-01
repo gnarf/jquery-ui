@@ -17,16 +17,13 @@
 			throw "Observable already extended for this data.";
 		}
 
-		var factory;
-		if ( options ) {
-			factory = function( data ) {
-				var observable = createObservable( data );
+		var factory = !options ? null : function( data ) {
+			var observable = createObservable( data );
 				observable._beforeChange = options.beforeChange;
 				observable._afterChange = options.afterChange;
-				observable._afterEvents = options.afterEvents;
+				observable._afterEvent = options.afterEvent;
 				return observable;
-			};
-		}
+		};
 
 		$.data( data, observableFactoryKey, factory );
 	}
@@ -136,23 +133,24 @@
 			return this._data;
 		},
 
-		insert: function( index ) {
+		insert: function( index, data ) {
 			validateIndex( index );
 
 			if ( arguments.length > 1 ) {
-				var arg1 = arguments[ 1 ],
-					items = arg1 == null ? [ arg1 ] : $.makeArray( arg1 );
-				// arg1 can be a single item (including a null/undefined value) or an array of items.
+				data = $.isArray( data ) ? data : [ data ];  // TODO: Clone array here?
+				// data can be a single item (including a null/undefined value) or an array of items.
 
-				if ( items.length > 0 ) {
+				if ( data.length > 0 ) {
 					var that = this,
 						changeFn = function() {
-							splice.apply( that._data, [ index, 0 ].concat( items ) );
+							splice.apply( that._data, [ index, 0 ].concat( data ) );
 						},
-						eventData = { change: "insert", index: index, items: items };
+						eventData = { change: "insert", index: index, items: data };
 					this._changeDataAndTriggerEvents( changeFn, eventData );
 				}
 			}
+
+			return this;
 		},
 
 		remove: function( index, numToRemove ) {
@@ -168,6 +166,8 @@
 					eventData = { change: "remove", index: index, items: items };
 				this._changeDataAndTriggerEvents( changeFn, eventData );
 			}
+
+			return this;
 		},
 
 		move: function( oldIndex, newIndex, numToMove ) {
@@ -185,6 +185,8 @@
 					eventData = { change: "move", oldIndex: oldIndex, newIndex: newIndex, items: items };
 				this._changeDataAndTriggerEvents( changeFn, eventData );
 			}
+
+			return this;
 		},
 
 		refresh: function( newItems ) {
@@ -194,6 +196,7 @@
 				},
 				eventData = { change: "refresh", oldItems: this._data.slice( 0 ), newItems: newItems };
 			this._changeDataAndTriggerEvents( changeFn, eventData );
+			return this;
 		},
 
 		_changeDataAndTriggerEvents: function( changeFn, eventData ) {
@@ -227,8 +230,8 @@
 
 		$target.triggerHandler( type, data );
 
-		if ( observable._afterEvents ) {
-			observable._afterEvents.call( observable, target, type, data );
+		if ( observable._afterEvent ) {
+			observable._afterEvent.call( observable, target, type, data );
 		}
 	};
 
