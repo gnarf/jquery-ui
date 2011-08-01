@@ -66,13 +66,13 @@
 								newItems = data.newItems;
 
 							var insertedItems = $.grep( newItems, function() {
-									return $.inArray( this, oldItems ) < 0;
-								} );
+								return $.inArray( this, oldItems ) < 0;
+							} );
 							that._trackInsertedItems( insertedItems );
 
 							var removedItems = $.grep( oldItems, function() {
-									return $.inArray( this, newItems ) < 0;
-								} );
+								return $.inArray( this, newItems ) < 0;
+							} );
 							that._trackRemovedItems( removedItems );
 							break;
 					}
@@ -128,6 +128,10 @@
 			});
 		},
 
+		// We want custom data-tracker events to follow any data change events on the actual model data,
+		// so clients listening on both will see in the right order:
+		//   (1) A new customer was added to my array -- UI control will add a new DOM element
+		//   (2) The data changelist was modified to include an "item add" -- App will style new DOM element in UI control
 		_pushItemAndDeferEvent: function( array, item ) {
 			var index = array.length;
 			array.push( item );
@@ -145,10 +149,8 @@
 		},
 
 		_triggerDeferredEvents: function() {
-				$.each(this._deferredEvents, function() {
-					this();
-				} );
-				this._deferredEvents.splice(0, this._deferredEvents.length);
+			$.each(this._deferredEvents.slice( 0 ), function() { this(); } );
+			this._deferredEvents.splice(0, this._deferredEvents.length);
 		}
 	};
 } )( jQuery )

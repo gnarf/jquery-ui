@@ -218,6 +218,7 @@
 		if ( observable._beforeChange ) {
 			// With this hook, extenders (data stores, for instance) might do copy-on-write to
 			// to snapshot the original data value before it is altered (below).
+			// For instance, "propertyChange" events won't carry the pre-changed state of the object.
 			observable._beforeChange.call( observable, target, type, data );
 		}
 
