@@ -64,10 +64,16 @@
 			columns: [ "firstName", "lastName", "country" ],
 			source: tracker.removedItems
 		});
-		$( "#developers-updated" ).grid({
+		var updatedItemsGrid = $.ui.grid( {
 			selectMode: "none",
 			columns: [ "firstName", "lastName", "country" ],
 			source: tracker.updatedItems
+		}, "#developers-updated" );
+		// TODO find a better way to add markup to the generated row template
+		updatedItemsGrid.options.rowTemplate = updatedItemsGrid.options.rowTemplate.substring( 0, updatedItemsGrid.options.rowTemplate.length - 5 )
+			+ "<td><button class='revert'>Revert</button></td></tr>";
+		updatedItemsGrid.element.delegate( "button.revert", "click", function() {
+			tracker.revertItemChanges( $( this ).tmplItem().data );
 		});
 
 		var grid = $.ui.grid( {
@@ -251,6 +257,7 @@
 			<th data-field="firstName">First Name</th>
 			<th data-field="lastName">Last Name</th>
 			<th data-field="country">Country</th>
+			<th>Revert Changes</th>
 		</tr>
 	</thead>
 	<tbody>

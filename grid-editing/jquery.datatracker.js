@@ -6,6 +6,7 @@
 		}
 
 		this.updatedItems = [];
+		this._originalItems = [];
 		this.insertedItems = [];
 		this.removedItems = [];
 
@@ -25,11 +26,23 @@
 		_deferredEvents: null,
 
 		updatedItems: null,
+		_originalItems: null,
 		insertedItems: null,
 		removedItems: null,
 
 		destroy: function () {
 			$.observable.extend( this._array, null );
+		},
+
+		revertItemChanges: function ( item ) {
+			// TODO: This only treats updates so far.  It could be extended to treat adds/removes as well.
+			var index = $.inArray( item, this.updatedItems );
+			if ( index >= 0 ) {
+				var originalItem = this._originalItems[ index ];
+				this._originalItems.splice(index, 1);
+				$.observable( item, { useDefault: true } ).setProperty( originalItem );
+				$.observable( this.updatedItems, { useDefault: true } ).remove( index );
+			}
 		},
 
 		// TODO: To illustrate the use of $.observable(data, { useDefault: true }), I could add
@@ -102,10 +115,11 @@
 		_makeItemObservable: function( item ) {
 			var that = this;
 			$.observable.extend( item, {
-				afterChange: function( target, type, data ) {
+				beforeChange: function ( target, type, data ) {
 					if ( $.inArray( item, that.insertedItems ) < 0 &&
 						$.inArray( item, that.updatedItems ) < 0 ) {
 						that._pushItemAndDeferEvent( that.updatedItems, item );
+						that._originalItems.push( $.extend( { }, item ) );
 					}
 				},
 				afterEvent: function() {

@@ -216,6 +216,8 @@
 		var target = $target[0];
 
 		if ( observable._beforeChange ) {
+			// With this hook, extenders (data stores, for instance) might do copy-on-write to
+			// to snapshot the original data value before it is altered (below).
 			observable._beforeChange.call( observable, target, type, data );
 		}
 
@@ -225,12 +227,19 @@
 		}
 
 		if ( observable._afterChange ) {
+			// Here, extenders (data stores, for instance) have the opportunity to put their larger cache
+			// into a consistent state to reflect this change.  Importantly, this should be done _before_
+			// any listener is called back, as the listener may call into the extender and, otherwise,
+			// see potentially inconsistent state.
 			observable._afterChange.call( observable, target, type, data );
 		}
 
 		$target.triggerHandler( type, data );
 
 		if ( observable._afterEvent ) {
+			// Here, extenders (data stores, for instance) can trigger their own events, which may
+			// relate to data items added to observable arrays.  Such custom events should only be 
+			// triggered once listeners on observable arrays have been made aware of adds/inserts.
 			observable._afterEvent.call( observable, target, type, data );
 		}
 	};
