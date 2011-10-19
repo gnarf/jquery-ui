@@ -4,15 +4,16 @@
 	<meta charset="utf-8">
 	<title>Product Browsing</title>
 	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
-	<link rel="stylesheet" href="grid.css">
-	<script src="../jquery-1.5.1.js"></script>
+	<link rel="stylesheet" href="../demos/demos.css">
+	<script src="../jquery-1.6.2.js"></script>
 	<script src="../external/jquery.tmpl.js"></script>
 	<script src="../ui/jquery.ui.core.js"></script>
 	<script src="../ui/jquery.ui.widget.js"></script>
 	<script src="../ui/jquery.ui.position.js"></script>
 	<script src="../ui/jquery.ui.button.js"></script>
-	<script src="datasource.js"></script>
-	<script src="grid.js"></script>
+	<script src="../ui/jquery.ui.observable.js"></script>
+	<script src="../ui/jquery.ui.dataview.js"></script>
+	<script src="../ui/jquery.ui.grid.js"></script>
 	<script src="pager.js"></script>
 	<script>
 	$(function() {
@@ -39,7 +40,7 @@
 			.replace( /(?:^|\s)1 ([a-z]+)s/g, " 1 $1" );
 		}
 
-		var ebay = $.ui.datasource({
+		var ebay = $.ui.dataview({
 			paging: {
 				limit: 10
 			},
@@ -99,14 +100,14 @@
 			.addClass( "ui-widget-overlay" )
 			.hide()
 			.appendTo( "body" );
-		$( ebay ).bind( "datasourcerequest", function() {
+		$( ebay ).bind( "dataviewrequest", function() {
 			overlay.show();
-		}).bind( "datasourceresponse", function() {
+		}).bind( "dataviewresponse", function() {
 			overlay.hide();
 		});
 
 		$( "table" ).grid({
-			source: ebay
+			source: ebay.result
 		});
 
 		$( "#pager" ).pager({
@@ -206,18 +207,28 @@
 		<button data-page="next">Next</button>
 		<button data-page="last">Last</button>
 	</p>
+	<div style="width:107em;">
 	<table>
+		<colgroup>
+			<col width="36%">
+			<col width="8%">
+			<col width="15%">
+			<col width="7%">
+			<col width="9%">
+			<col width="25%">
+		</colgroup>
 		<thead>
 			<tr>
-				<th data-field="title">Title</th>
-				<th data-field="condition">Condition</th>
-				<th data-field="category">Category</th>
-				<th data-field="price">Price ($)</th>
-				<th data-field="shipping">Shipping ($)</th>
-				<th data-field="timeleft">Time Left</th>
+				<th data-property="title">Title</th>
+				<th data-property="condition">Condition</th>
+				<th data-property="category">Category</th>
+				<th data-property="price">Price ($)</th>
+				<th data-property="shipping">Shipping ($)</th>
+				<th data-property="timeleft">Time Left</th>
 			</tr>
 		</thead>
 		<tbody></tbody>
 	</table>
+	</div>
 </body>
 </html>

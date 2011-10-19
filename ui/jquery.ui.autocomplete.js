@@ -51,7 +51,7 @@ $.widget( "ui.autocomplete", {
 			suppressKeyPress,
 			suppressInput;
 
-		this.valueMethod = this.element[ this.element.is( "input" ) ? "val" : "text" ];
+		this.valueMethod = this.element[ this.element.is( "input,textarea" ) ? "val" : "text" ];
 
 		this.element
 			.addClass( "ui-autocomplete-input" )
@@ -63,7 +63,7 @@ $.widget( "ui.autocomplete", {
 				"aria-haspopup": "true"
 			})
 			.bind( "keydown.autocomplete", function( event ) {
-				if ( self.options.disabled || self.element.attr( "readonly" ) ) {
+				if ( self.options.disabled || self.element.prop( "readOnly" ) ) {
 					suppressKeyPress = true;
 					suppressInput = true;
 					return;
@@ -263,6 +263,7 @@ $.widget( "ui.autocomplete", {
 	},
 
 	_destroy: function() {
+		clearTimeout( this.searching );
 		this.element
 			.removeClass( "ui-autocomplete-input" )
 			.removeAttr( "autocomplete" )
@@ -324,6 +325,7 @@ $.widget( "ui.autocomplete", {
 
 	_searchTimeout: function( event ) {
 		var self = this;
+		clearTimeout( self.searching );
 		self.searching = setTimeout(function() {
 			// only search if the value has changed
 			if ( self.term != self.element.val() ) {
@@ -383,7 +385,7 @@ $.widget( "ui.autocomplete", {
 			this._trigger( "close", event );
 		}
 	},
-	
+
 	_change: function( event ) {
 		if ( this.previous !== this._value() ) {
 			this._trigger( "change", event, { item: this.selectedItem } );

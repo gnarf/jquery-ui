@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Grid: Editing, Inline Grid</title>
+	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
+	<link rel="stylesheet" href="../demos/demos.css">
+	<script src="../jquery-1.6.2.js"></script>
+	<script src="../external/globalize.js"></script>
+	<script src="../external/jquery.tmpl.js"></script>
+	<script src="../external/jquery.mousewheel-3.0.4.js"></script>
+	<script src="../ui/jquery.ui.core.js"></script>
+	<script src="../ui/jquery.ui.widget.js"></script>
+	<script src="../ui/jquery.ui.button.js"></script>
+	<script src="../ui/jquery.ui.spinner.js"></script>
+	<script src="../ui/jquery.ui.position.js"></script>
+	<script src="../ui/jquery.ui.tooltip.js"></script>
+	<script src="../ui/jquery.ui.autocomplete.js"></script>
+	<script src="../ui/jquery.ui.menu.js"></script>
+	<script src="../ui/jquery.ui.dataview.js"></script>
+	<script src="../ui/jquery.ui.observable.js"></script>
+	<script src="../ui/jquery.ui.grid.js"></script>
+	<script src="../grid-spf/dataview-local.js"></script>
+	<script src="../grid-spf/pager.js"></script>
+	<script src="editor.js"></script>
+	<script src="grid-editor.js"></script>
+	<script src="editor-countrycomplete.js"></script>
+	<script src="editor-randomspinner.js"></script>
+	<script src="navigator.js"></script>
+	<script src="localstore.js"></script>
+	<script src="helpers.js"></script>
+	<script>
+	if ( !window.console ) {
+		window.console = {
+			log: function() {
+				var message = Array.prototype.slice.call( arguments, 1 ).join( ", " );
+				$("<div>").text( message ).appendTo("body");
+			}
+		}
+	}
+
+	$(function() {
+		var columns = [],
+			i, j;
+		for (i = 65; i <= 70; i++) {
+			columns.push(String.fromCharCode(i));
+		}
+		var source = [{}];
+
+		$( "#csvEditor" ).grid({
+			columns: columns,
+			source: source
+		})
+			.gridEditor()
+			.navigator()
+			.grid("refresh");
+
+		$( "#addRow" ).click( function() {
+			$.observable( source ).insert( {} );
+		});
+
+		$( "#export" ).click(function() {
+			var result = "";
+			for (j = 0; j < source.length; j++) {
+				var row = [];
+				for (i = 0; i < columns.length; i++) {
+					// TODO proper CSV editor would escape values here
+					row.push(source[j][columns[i]] || "");
+				}
+				result += row.join(",") + "\n";
+			}
+			console.log(result);
+		});
+	});
+	</script>
+	<style>
+		.ui-grid tr .navigator-active { background: rgba(0,0,255,0.2); }
+		.ui-grid input { border: none; margin: 0; }
+		thead td { text-align: center; }
+	</style>
+</head>
+<body>
+
+<h1>Grid based custom csv editor (experimental)</h1>
+
+<table id="csvEditor">
+	<thead>
+		<tr>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+
+<button id="addRow">Add row</button>
+<button id="export">Export as CSV (on console for now)</button>
+
+</body>
+</html>

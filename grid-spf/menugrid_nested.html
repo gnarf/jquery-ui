@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Grid: Sorting, Paging, Filtering</title>
+	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
+	<link rel="stylesheet" href="../demos/demos.css">
+	<link rel="stylesheet" href="menugrid.css">
+	<script src="../jquery-1.6.2.js"></script>
+	<script src="../external/jquery.tmpl.js"></script>
+	<script src="../ui/jquery.ui.core.js"></script>
+	<script src="../ui/jquery.ui.widget.js"></script>
+	<script src="../ui/jquery.ui.button.js"></script>
+	<script src="../ui/jquery.ui.menu.js"></script>
+	<script src="../ui/jquery.ui.position.js"></script>
+	<script src="../ui/jquery.ui.popup.js"></script>
+	<script src="../ui/jquery.ui.observable.js"></script>
+	<script src="../ui/jquery.ui.dataview.js"></script>
+	<script src="../ui/jquery.ui.grid.js"></script>
+	<script src="dataview-odata.js"></script>
+	<script src="dataview-nested.js"></script>
+	<script src="pager.js"></script>
+	<script src="menugrid.js"></script>
+	<script>
+	$(function() {
+		// TODO this doesn't really work
+		var movies = $.ui.nestedDataview({
+			paging: {
+				limit: 10
+			},
+			remote: $.ui.odataDataview({
+				resource: "http://odata.netflix.com/Catalog/Titles"
+			})
+		});
+		var grid = $( "#movies" ).menugrid({
+			source: movies
+		});
+
+		$( "#pager" ).pager({
+			source: movies
+		});
+
+		movies.refresh();
+	});
+	</script>
+	<style>
+	.ui-menu {
+		position: absolute;
+	}
+	</style>
+</head>
+<body>
+
+<script type="text/x-jquery-tmpl" id="menu-tmpl">
+	<ul>
+		<li>
+			<a href="#" data-sort="asc">Sort Ascending</a>
+		</li>
+		<li>
+			<a href="#" data-sort="desc">Sort Descending</a>
+		</li>
+	</ul>
+</script>
+
+<h2>Movies! Click header for sort menu, use inputs for filtering, pager for paging</h2>
+<div style="width:70em;">
+<table id="movies">
+	<colgroup>
+		<col width="50%">
+		<col width="25%">
+		<col width="25%">
+	</colgroup>
+	<thead>
+		<tr>
+			<th data-property="Name" data-type="string">Name</th>
+			<th data-property="ReleaseYear" data-type="number">Release Year</th>
+			<th data-property="AverageRating" data-type="number">Average Rating</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+	<tfoot>
+		<tr>
+			<td id="pager" colspan="4" class="ui-state-default">
+				<button data-page="first">First</button>
+				<button data-page="prev">Prev</button>
+				<span>
+					Page <input class="current" size="4"/>/<span class="total">0</span>,
+					Total records <span class="totalRecords">0</span>
+				</span>
+				<button data-page="next">Next</button>
+				<button data-page="last">Last</button>
+			</td>
+		</tr>
+	</tfoot>
+</table>
+</div>
+
+</body>
+</html>

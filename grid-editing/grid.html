@@ -4,8 +4,10 @@
 	<meta charset="utf-8">
 	<title>Grid: Editing, Inline Grid</title>
 	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
-	<link rel="stylesheet" href="../grid-spf/grid.css">
-	<script src="../jquery-1.5.1.js"></script>
+	<link rel="stylesheet" href="../demos/demos.css">
+	<script src="../jquery-1.6.2.js"></script>
+	<script src="../external/globalize.js"></script>
+	<script src="../external/globalize.culture.de-DE.js"></script>
 	<script src="../external/jquery.tmpl.js"></script>
 	<script src="../external/jquery.mousewheel-3.0.4.js"></script>
 	<script src="../ui/jquery.ui.core.js"></script>
@@ -14,258 +16,177 @@
 	<script src="../ui/jquery.ui.spinner.js"></script>
 	<script src="../ui/jquery.ui.position.js"></script>
 	<script src="../ui/jquery.ui.tooltip.js"></script>
-	<script src="../grid-spf/datasource.js"></script>
-	<script src="../grid-spf/datasource-local.js"></script>
-	<script src="../grid-spf/grid.js"></script>
+	<script src="../ui/jquery.ui.autocomplete.js"></script>
+	<script src="../ui/jquery.ui.menu.js"></script>
+	<script src="../ui/jquery.ui.dataview.js"></script>
+	<script src="../ui/jquery.ui.grid.js"></script>
+	<script src="../ui/jquery.ui.observable.js"></script>
+	<script src="../grid-spf/dataview-local.js"></script>
 	<script src="../grid-spf/pager.js"></script>
 	<script src="editor.js"></script>
+	<script src="grid-editor.js"></script>
+	<script src="editor-countrycomplete.js"></script>
+	<script src="editor-randomspinner.js"></script>
+	<script src="navigator.js"></script>
 	<script src="localstore.js"></script>
 	<script src="helpers.js"></script>
-	<script src="jquery.observable.js"></script>
-	<script src="jquery.datatracker.js"></script>
 	<script>
+	if ( !window.console ) {
+		window.console = {
+			log: function() {
+				var message = Array.prototype.slice.call( arguments, 1 ).join( ", " );
+				$("<div>").text( message ).appendTo("body");
+			}
+		}
+	}
+
+	// TODO this breaks the date/time formatting
+	// need to figure out how to deal with that properly
+	// put metadata on columns, e.g. for date data-type="date" data-format="d"?
+	//Globalize.culture( "de-DE" );
+
 	var store = $.demos.localstore( {
 		key: "grid-editing-developers",
 		initial: "../grid-spf/developers.json"
 	});
 	var localDevelopers = store.load();
-
 	$(function() {
-		var developers = $.ui.localDatasource({
+		var developers = $.ui.localDataview({
 			input: localDevelopers,
 			paging: {
 				limit: 8
 			}
 		});
 
-		var tracker = $.dataTracker( localDevelopers ),
-			trackerChanged = function() {
-				if ( typeof( console ) !== "undefined" ) {
-					console.log("saving");
-				}
-				store.save( localDevelopers );
-				// We could examine "tracker" to determine what changed here in order
-				// to do an incremental save.
-
-				styleChangedRows($( "#developers-local tr" ));
-				// We can be sure that this selector is in sync with localDevelopers, since
-				// the data-tracker issues its events _after_ any changes to localDevelopers.
-				// Data-tracker does this by hooking $.observable.
-			};
-		$( [ tracker.insertedItems, tracker.removedItems, tracker.updatedItems ] ).bind( "arrayChange", trackerChanged );
-
-		$( "#developers-inserted" ).grid({
-			selectMode: "none",
-			columns: [ "firstName", "lastName", "country" ],
-			source: tracker.insertedItems
-		});
-		$( "#developers-removed" ).grid({
-			selectMode: "none",
-			columns: [ "firstName", "lastName", "country" ],
-			source: tracker.removedItems
-		});
-		var updatedItemsGrid = $.ui.grid( {
-			selectMode: "none",
-			columns: [ "firstName", "lastName", "country" ],
-			source: tracker.updatedItems
-		}, "#developers-updated" );
-		// TODO find a better way to add markup to the generated row template
-		updatedItemsGrid.options.rowTemplate = updatedItemsGrid.options.rowTemplate.substring( 0, updatedItemsGrid.options.rowTemplate.length - 5 )
-			+ "<td><button class='revert'>Revert</button></td></tr>";
-		updatedItemsGrid.element.delegate( "button.revert", "click", function() {
-			tracker.revertItemChanges( $( this ).tmplItem().data );
+		var grid = $( "#developers-local" ).grid({
+			heightStyle: "fill",
+			source: developers.result
 		});
 
-		var grid = $.ui.grid( {
-			source: developers.toArray(),
-			rowAdded: function( event, elem ) {
-				$( elem ).find( "td:not(:has(button))" ).each( function() {
-					var th = $( this ).parents( "table:first" ).find( "th" ).eq( this.cellIndex ),
-						field = th.data( "field" );
-					$( this ).editor({
-						type: th.data( "type" ),
-						submit: function( event, ui ) {
-							var object = $( this ).tmplItem().data;
-							var oldValue = get(object, field);
-							$.observable( object ).setProperty( field, ui.value );
-						}
-					});
-				});
-
-				styleChangedRows( $( elem ) );
-				// We can be sure that data-tracker has accurately tracked changes to localDevelopers
-				// by the time this event is issued (due to a localDevelopers change).
-				// Data-tracker hooks $.observable to ensure it can synchronize its state before data
-				// change events are issued.
-			}
-		}, "#developers-local" );
-
-		// TODO find a better way to add markup to the generated row template
-		grid.options.rowTemplate = grid.options.rowTemplate.substring( 0, grid.options.rowTemplate.length - 35 )
-			+ "<button class='edit'>Edit</button></td>"
-			+ "<td><button class='remove'>Remove</button></td></tr>";
+		grid.gridEditor({
+			items: "td:not(:has(button))"
+		});
+		grid.navigator();
 
 		var developer;
-		var editForm = $( "#editForm" ).hide().submit( function( event ) {
+		var editForm = $( "#editForm" ).tooltip().hide().submit( function( event ) {
 			event.preventDefault();
-			$.observable( developer ).setProperty( $( this ).serializeArray() );
+			$.observable( developer ).property( serializeForm( this ) );
 			editForm.hide();
+			grid.focus();
 		});
-		grid.element.delegate( "button.edit", "click", function() {
-			developer = $( this ).tmplItem().data;
+		grid.delegate( "button.edit", "click", function() {
+			developer = $( this ).closest("tr").data( "grid-item" );
 			$( "#edit-tmpl" ).tmpl( meta(developer) ).appendTo( editForm.find("fieldset").empty() );
-			editForm.show();
+			editForm.show().find("input:first").focus();
 		});
-		grid.element.delegate( "button.remove", "click", function() {
-			var developerToRemove = $( this ).tmplItem().data;
-			var index = localDevelopers.indexOf( developerToRemove );
-			$.observable( localDevelopers ).remove( index );
-
-			if ( developerToRemove === developer ) {
-				editForm.hide();
-			}
-
-			// This could be treated differently.  We could change the localDataSource impl
-			// to listen for "arrayChange" on its input and automatically do this refresh.
-			// App code could similiarly listen on "arrayChange" on localDevelopers to refresh.
-			// The benefit of these alternatives is that they work if localDevelopers is
-			// changed by code that isn't this handler.
-			developers.refresh();
+		grid.delegate( "button.remove", "click", function() {
+			var developer = $( this ).closest("tr").data( "grid-item" );
+			$.observable( localDevelopers ).remove( developer );
 		});
 
 		$( "#pageDevelopers" ).pager({
 			source: developers
 		});
 
-		$( "#addDeveloper" ).click( function() {
-			// add at front so that it becomes visible without paging
-			$.observable( localDevelopers ).insert( 0, {
-				firstName: "Peter",
-				lastName: "Pan",
-				country: "Unknown",
-				bitcoins: 0,
+		function newDeveloper() {
+			return {
+				firstName: [ "Peter", "Unknown", "Carl" ][ Math.floor( Math.random() * 3 ) ],
+				lastName: [ "Pan", "Unkown", "Worth" ][ Math.floor( Math.random() * 3 ) ],
+				country: [ "Unknown", "Pandistan", "Petertan" ][ Math.floor( Math.random() * 3 ) ],
+				bitcoins: Math.floor( Math.random() * 1500 ),
 				random: {
-					value: 0
-				}
-			});
-
-			// See refresh comment above.
-			developers.refresh();
+					value: Math.floor( Math.random() * 13 )
+				},
+				date: +new Date()
+			}
+		}
+		$( "#addDeveloper" ).click( function() {
+			$.observable( localDevelopers ).insert( 0, newDeveloper() );
+		});
+		$( "#addDeveloperAtEnd" ).click( function() {
+			$.observable( localDevelopers ).insert( newDeveloper() );
 		});
 
-		$("form").tooltip();
-
 		developers.refresh();
-
-		function styleChangedRows( rows ) {
-			var changedClass = "grid-selected-row";
-			rows.removeClass( changedClass ).filter( function() {
-				var developer = $( this ).tmplItem().data;
-				return $.inArray( developer, tracker.insertedItems ) >= 0 ||
-					$.inArray( developer, tracker.removedItems ) >= 0 ||
-					$.inArray( developer, tracker.updatedItems ) >= 0;
-			}).addClass( changedClass );
-		};
 	});
 	</script>
 	<style>
+		.ui-grid tr .navigator-active { background: rgba(0,0,255,0.1); }
+		.ui-grid input { border: none; margin: 0; }
+		.ui-autocomplete { width: 200px; max-height: 200px; overflow: auto; }
+		thead td { text-align: center; }
+		#pageDevelopers { text-align: center; }
+		.totals { padding-left: 1em; }
+
+		/* TODO make this actually work */
+		tbody { min-height: 264px; }
 	</style>
 </head>
 <body>
 
-<h1>Grids with editable local datasource</h1>
-
-<div style="float: left;">
+<h1>Grids with editable local dataview</h1>
 
 <h2>local data source</h2>
-<p id="pageDevelopers">
-	<button data-page="first">First</button>
-	<button data-page="prev">Prev</button>
-	<button data-page="prevStep">-1</button>
-	<span>
-		Page <input class="current" size="4"/>/<span class="total">0</span>,
-		Total records <span class="totalRecords">0</span>
-	</span>
-	<button data-page="nextStep">+1</button>
-	<button data-page="next">Next</button>
-	<button data-page="last">Last</button>
-</p>
+<p>See also <a href="grid-selectable.html">grid-selectable</a></p>
+
+<div style="width:80em;">
 <table id="developers-local">
+	<caption>Developers Grid</caption>
+	<colgroup>
+		<col width="12%">
+		<col width="12%">
+		<col width="12%">
+		<col width="10.34483%">
+		<col width="12%">
+		<col width="13.79310%">
+		<col width="10.34483%">
+		<col width="6.896552%">
+		<col width="10.34483%">
+	</colgroup>
 	<thead>
 		<tr>
-			<th data-field="firstName">First Name</th>
-			<th data-field="lastName">Last Name</th>
-			<th data-field="country">Country</th>
-			<th data-field="bitcoins" data-type="number">Bitcoins</th>
-			<th data-field="random.value" data-type="number">Random</th>
-			<th>Edit</th>
-			<th>Remove</th>
+			<th data-property="firstName">First Name</th>
+			<th data-property="lastName">Last Name</th>
+			<th data-property="country" data-editor="countrycomplete">Country</th>
+			<th data-property="bitcoins" data-type="number" data-editor="spinner">Bitcoins</th>
+			<th data-template="#cell-date-tmpl">Date</th>
+			<th data-template="#cell-time-tmpl">Time</th>
+			<th data-property="random.value" data-type="number" data-editor="randomSpinner" data-editor-options='{"min":-1, "max": 125}'>Random</th>
+			<th data-template="#cell-edit-tmpl">Edit</th>
+			<th data-template="#cell-remove-tmpl">Remove</th>
 		</tr>
 	</thead>
 	<tbody>
 	</tbody>
+	<tfoot>
+		<tr>
+			<td id="pageDevelopers" colspan="9" class="ui-state-default">
+				<button data-page="first">First</button>
+				<button data-page="prev">Prev</button>
+				<span>
+					Page <input class="current" size="4"/> of <span class="total">0</span>
+				</span>
+				<button data-page="next">Next</button>
+				<button data-page="last">Last</button>
+				<span class="totals">
+					Total records <span class="totalRecords">0</span>
+				</span>
+			</td>
+		</tr>
+	</tfoot>
 </table>
+</div>
 
 <div>
 	<button id="addDeveloper">Insert new developer</button>
+	<button id="addDeveloperAtEnd">Insert new developer at the end</button>
 </div>
 <form id="editForm">
 	<fieldset>
 	</fieldset>
 	<input type="submit" value="Save changes" />
 </form>
-
-</div>
-
-<div style="float: right;">
-
-<h1>Change-tracking</h1>
-
-<h2>Inserted developers</h2>
-
-<table id="developers-inserted">
-	<thead>
-		<tr>
-			<th data-field="firstName">First Name</th>
-			<th data-field="lastName">Last Name</th>
-			<th data-field="country">Country</th>
-		</tr>
-	</thead>
-	<tbody>
-	</tbody>
-</table>
-
-<h2>Removed developers</h2>
-
-<table id="developers-removed">
-	<thead>
-		<tr>
-			<th data-field="firstName">First Name</th>
-			<th data-field="lastName">Last Name</th>
-			<th data-field="country">Country</th>
-		</tr>
-	</thead>
-	<tbody>
-	</tbody>
-</table>
-
-<h2>Updated developers</h2>
-
-<table id="developers-updated">
-	<thead>
-		<tr>
-			<th data-field="firstName">First Name</th>
-			<th data-field="lastName">Last Name</th>
-			<th data-field="country">Country</th>
-			<th>Revert Changes</th>
-		</tr>
-	</thead>
-	<tbody>
-	</tbody>
-</table>
-
-</div>
-
 <script id="edit-tmpl" type="text/x-jquery-tmpl">
 {{if $.isArray(value)}}
 	<ul>
@@ -276,6 +197,18 @@
 {{else}}
 	<input type="text" name="${name}" placeholder="${label}" value="${value}" title="${label}" />
 {{/if}}
+</script>
+<script id="cell-date-tmpl" type="text/x-jquery-tmpl">
+	<td class="ui-widget-content">${Globalize.format(new Date(date), "d")}</td>
+</script>
+<script id="cell-time-tmpl" type="text/x-jquery-tmpl">
+	<td class="ui-widget-content">${Globalize.format(new Date(date), "T")}</td>
+</script>
+<script id="cell-edit-tmpl" type="text/x-jquery-tmpl">
+	<td class="ui-widget-content"><button class='edit'>Edit</button></td>
+</script>
+<script id="cell-remove-tmpl" type="text/x-jquery-tmpl">
+	<td class="ui-widget-content"><button class='remove'>Remove</button></td>
 </script>
 
 </body>

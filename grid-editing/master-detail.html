@@ -6,12 +6,13 @@
 	<title>Grid: Editing, Master/Detail</title>
 	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
 	<link rel="stylesheet" href="../demos/demos.css">
-	<script src="../jquery-1.5.1.js"></script>
+	<script src="../jquery-1.6.2.js"></script>
 	<script src="../external/jquery.tmpl.js"></script>
 	<script src="../external/jquery.mousewheel-3.0.4.js"></script>
 	<script src="../ui/jquery.ui.core.js"></script>
 	<script src="../ui/jquery.ui.widget.js"></script>
 	<script src="../ui/jquery.ui.button.js"></script>
+	<script src="../ui/jquery.ui.observable.js"></script>
 	<script src="localstore.js"></script>
 	<script src="helpers.js"></script>
 	<script>
@@ -22,43 +23,53 @@
 	var movies = store.load();
 
 	$(function() {
-		$(":submit").button();
-		function save() {
-			store.save( movies );
-			$(store).trigger("update");
-			return this;
-		};
+		function renderList() {
+			list.empty().append( $( "#movie-list-item" ).tmpl( movies ) );
+		}
+		function bindChange( items ) {
+			$.each( items, function( index, item ) {
+				$.observable( item ).bind( "change", function() {
+					renderList();
+				});
+			});
+		}
+		$.observable( movies ).bind("insert remove replaceAll", function( event, ui ) {
+			if ( event.type === "insert" ) {
+				bindChange( ui.items );
+			}
+			store.save();
+			renderList();
+		});
+		bindChange( movies );
 
-		var movie;
+		$(":submit").button();
+
 		var editForm = $( "#editForm" ).hide().submit( function( event ) {
 			event.preventDefault();
-			serializeForm( this, movie );
-			save();
+			var movie = $( this ).data( "movie" );
+			$.observable( movie, movies ).property( serializeForm( this ) );
 			editForm.hide();
 		});
 		var list = $("#movies-list").delegate("li:has(li)", "click", function() {
-			movie = $( this ).tmplItem().data;
+			var movie = $( this ).tmplItem().data;
+			editForm.data( "movie", movie );
 			deserializeForm( editForm, movie );
 			editForm.show();
 		});
-		$(store).bind("update", function() {
-			list.empty().append( $("#movie-list-item").tmpl( movies ) );
-		});
 
 		$("#addMovie").click(function() {
-			movies.push({
+			$.observable(movies).insert({
 				title: "New Movie",
 				alternative_titles: [],
 				languages: [{
 					name: "English"
 				}]
 			});
-			save();
 		});
 
 		$("#editForm").hide();
 
-		$(store).trigger("update");
+		renderList();
 	});
 	</script>
 	<style>

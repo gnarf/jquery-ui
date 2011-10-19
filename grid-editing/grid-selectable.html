@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Grid: Selectable Editing</title>
+	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
+	<link rel="stylesheet" href="../demos/demos.css">
+	<script src="../jquery-1.6.2.js"></script>
+	<script src="../external/globalize.js"></script>
+	<script src="../external/jquery.tmpl.js"></script>
+	<script src="../external/jquery.mousewheel-3.0.4.js"></script>
+	<script src="../ui/jquery.ui.core.js"></script>
+	<script src="../ui/jquery.ui.widget.js"></script>
+	<script src="../ui/jquery.ui.button.js"></script>
+	<script src="../ui/jquery.ui.spinner.js"></script>
+	<script src="../ui/jquery.ui.position.js"></script>
+	<script src="../ui/jquery.ui.tooltip.js"></script>
+	<script src="../ui/jquery.ui.autocomplete.js"></script>
+	<script src="../ui/jquery.ui.menu.js"></script>
+	<script src="../ui/jquery.ui.mouse.js"></script>
+	<script src="../ui/jquery.ui.selectable.js"></script>
+	<script src="../ui/jquery.ui.dataview.js"></script>
+	<script src="../ui/jquery.ui.grid.js"></script>
+	<script src="../ui/jquery.ui.observable.js"></script>
+	<script src="../grid-spf/dataview-local.js"></script>
+	<script src="../grid-spf/pager.js"></script>
+	<script src="grid.selectable.js"></script>
+	<script src="navigator.js"></script>
+	<script src="localstore.js"></script>
+	<script src="helpers.js"></script>
+	<script>
+	if ( !window.console ) {
+		window.console = {
+			log: function() {
+				var message = Array.prototype.slice.call( arguments, 1 ).join( ", " );
+				$("<div>").text( message ).appendTo("body");
+			}
+		}
+	}
+
+	var store = $.demos.localstore( {
+		key: "grid-editing-developers",
+		initial: "../grid-spf/developers.json"
+	});
+	var localDevelopers = store.load();
+
+	$(function() {
+		var developers = $.ui.localDataview({
+			input: localDevelopers,
+			paging: {
+				limit: 8
+			}
+		});
+
+		var selected = [];
+		// update status when selection changes
+		$.observable( selected ).bind("insert remove", function() {
+			$( ".selected-status" ).text( selected.length );
+		});
+
+		var grid = $( "#developers-local" ).grid({
+			source: developers.result
+		});
+
+		grid.gridSelectable({
+			selected: selected
+		});
+
+		$( "#developers-selected" ).grid({
+			source: selected
+		});
+
+		$( "#pageDevelopers" ).pager({
+			source: developers
+		});
+
+		function newDeveloper() {
+			return {
+				firstName: [ "Peter", "Unknown", "Carl" ][ Math.floor( Math.random() * 3 ) ],
+				lastName: [ "Pan", "Unkown", "Worth" ][ Math.floor( Math.random() * 3 ) ],
+				country: [ "Unknown", "Pandistan", "Petertan" ][ Math.floor( Math.random() * 3 ) ],
+				bitcoins: Math.floor( Math.random() * 1500 ),
+				random: {
+					value: Math.floor( Math.random() * 13 )
+				},
+				date: +new Date()
+			}
+		}
+		$( "#addDeveloper" ).click( function() {
+			var insertAt = 0;
+			if ( selected.length ) {
+				insertAt = $.inArray( selected[ 0 ], localDevelopers );
+			}
+			$.observable( localDevelopers ).insert(  insertAt, newDeveloper() );
+		});
+		$( "#addDeveloperAfter" ).click( function() {
+			var insertAt = localDevelopers.length;
+			if ( selected.length ) {
+				insertAt = $.inArray( selected[ selected.length - 1 ], localDevelopers ) + 1;
+			}
+			$.observable( localDevelopers ).insert(  insertAt, newDeveloper() );
+		});
+
+		// TODO support editing multiple objects at once
+		var developer;
+		$( "#editDeveloper" ).click( function() {
+			if ( !selected.length ) {
+				alert( "None selected" );
+				return;
+			}
+			developer = selected[0];
+			$( "#edit-tmpl" ).tmpl( meta(developer) ).appendTo( editForm.find("fieldset").empty() );
+			editForm.show().find( "input:first" ).focus();
+		});
+		var editForm = $( "#editForm" ).tooltip({
+			position: {
+				my: "left bottom",
+				at: "left top"
+			}
+		}).hide().submit( function( event ) {
+			event.preventDefault();
+			$.observable( developer, localDevelopers ).property( serializeForm( this ) );
+			// TODO hide tooltip
+			editForm.hide();
+		});
+
+		$( "#removeDeveloper" ).click(function() {
+			if ( !selected.length ) {
+				alert( "None selected" );
+				return;
+			}
+			$.observable( localDevelopers ).remove( selected );
+			$.observable( selected ).remove( 0, selected.length );
+			developers.refresh();
+		});
+
+		$( "#clearSelection" ).click( function() {
+			$.observable( selected ).remove( 0, selected.length );
+			developers.refresh();
+		});
+
+		developers.refresh();
+	});
+	</script>
+	<style>
+		.ui-grid .ui-selecting td { background: #eef; }
+		.ui-grid .ui-selected td { background: #ddf; }
+		.navigator-active { background: rgba(0,0,255,0.5) !important; }
+		.ui-autocomplete { width: 200px; max-height: 200px; overflow: auto; }
+		thead td { text-align: center; }
+	</style>
+</head>
+<body>
+
+<h1>Grids with selectable rows</h1>
+
+<h2>local data source</h2>
+
+<div style="width:50em;">
+<table id="developers-local">
+	<caption>Developers Grid</caption>
+	<thead>
+		<tr>
+			<th data-property="firstName">First Name</th>
+			<th data-property="lastName">Last Name</th>
+			<th data-property="country">Country</th>
+			<th data-property="bitcoins" data-type="number">Bitcoins</th>
+			<th data-property="random.value" data-type="number">Random</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+	<tfoot>
+		<tr>
+			<td id="pageDevelopers" colspan="5" class="ui-state-default">
+				<span class="selected-status">0</span> row(s) selected
+				<button data-page="first">First</button>
+				<button data-page="prev">Prev</button>
+				<span>
+					Page <input class="current" size="4"/> of <span class="total">0</span>
+				</span>
+				<button data-page="next">Next</button>
+				<button data-page="last">Last</button>
+			</td>
+		</tr>
+	</tfoot>
+</table>
+
+<table id="developers-selected">
+	<caption>Selected Developers</caption>
+	<thead>
+		<tr>
+			<th data-property="firstName">First Name</th>
+			<th data-property="lastName">Last Name</th>
+			<th data-property="country">Country</th>
+			<th data-property="bitcoins" data-type="number">Bitcoins</th>
+			<th data-property="random.value" data-type="number">Random</th>
+		</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+</div>
+
+<div>
+	<button id="addDeveloper">Insert new developer before selection (start if none selected)</button>
+	<button id="addDeveloperAfter">Insert new developer after selection (end if none selected)</button>
+</div>
+<div>
+	<button id="editDeveloper">Edit selected developer</button>
+	<button id="removeDeveloper">Remove selected developer</button>
+	<button id="clearSelection">Clear selection</button>
+</div>
+<form id="editForm">
+	<fieldset>
+	</fieldset>
+	<input type="submit" value="Save changes" />
+</form>
+<script id="edit-tmpl" type="text/x-jquery-tmpl">
+{{if $.isArray(value)}}
+	<ul>
+		{{each(index, valueX) value}}
+			<li><input type="text" name="${name}" placeholder="${label}" value="${valueX}" title="${label}" /></li>
+		{{/each}}
+	</ul>
+{{else}}
+	<input type="text" name="${name}" placeholder="${label}" value="${value}" title="${label}" />
+{{/if}}
+</script>
+
+</body>
+</html>

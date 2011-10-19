@@ -4,16 +4,17 @@
 	<meta charset="utf-8">
 	<title>Grid: Sorting, Paging, Filtering</title>
 	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
-	<link rel="stylesheet" href="grid.css">
-	<script src="../jquery-1.5.1.js"></script>
+	<link rel="stylesheet" href="../demos/demos.css">
+	<script src="../jquery-1.6.2.js"></script>
 	<script src="../external/jquery.tmpl.js"></script>
 	<script src="../ui/jquery.ui.core.js"></script>
 	<script src="../ui/jquery.ui.widget.js"></script>
 	<script src="../ui/jquery.ui.button.js"></script>
-	<script src="datasource.js"></script>
-	<script src="datasource-local.js"></script>
-	<script src="datasource-odata.js"></script>
-	<script src="grid.js"></script>
+	<script src="../ui/jquery.ui.observable.js"></script>
+	<script src="../ui/jquery.ui.dataview.js"></script>
+	<script src="../ui/jquery.ui.grid.js"></script>
+	<script src="dataview-local.js"></script>
+	<script src="dataview-odata.js"></script>
 	<script src="pager.js"></script>
 	<script>
 	var localDevelopers;
@@ -26,7 +27,7 @@
 		}
 	});
 
-	$.fn.filterControl = function( datasource ) {
+	$.fn.filterControl = function( dataview ) {
 		this.addClass( "tool" ).find( "button" ).click(function() {
 			var button = $( this ),
 				field = button.data( "filter-field" ),
@@ -34,22 +35,22 @@
 				operator = button.data( "filter-operator" ),
 				key = "filter." + field;
 
-			if ( datasource.option( "filter." + field ) ) {
-				datasource.option( key, null );
+			if ( dataview.option( "filter." + field ) ) {
+				dataview.option( key, null );
 			} else {
-				datasource.option(key, {
+				dataview.option(key, {
 					value: value,
 					operator: operator
 				});
 			}
-			datasource.refresh();
+			dataview.refresh();
 
 			button.toggleClass( "active" );
 		})
 		return this;
 	};
 
-	$.fn.sorterControl = function( datasource ) {
+	$.fn.sorterControl = function( dataview ) {
 		// TODO see above
 		var sorted = {};
 		this.addClass( "tool" ).find( "button" ).click(function() {
@@ -71,13 +72,13 @@
 			for ( var key in sorted ) {
 				sort.push( sorted[ key ] );
 			}
-			datasource.option( "sort", sort ).refresh();
+			dataview.option( "sort", sort ).refresh();
 		})
 		return this;
 	};
 
 	$(function() {
-		var developers = $.ui.localDatasource({
+		var developers = $.ui.localDataview({
 			input: localDevelopers,
 			paging: {
 				limit: 3
@@ -85,8 +86,11 @@
 		});
 
 		$( "#developers-local" ).grid({
-			columns: [ "firstName", "lastName", "country" ],
-			source: developers
+			heightStyle: "fill",
+			source: developers.result,
+			select: function( event, ui ) {
+				console.log( "Selected " + ui.item.firstName );
+			}
 		});
 
 		$( "#filterDevelopers" ).filterControl( developers );
@@ -98,11 +102,11 @@
 		developers.refresh();
 
 		// A similar example...but with server integration and remote queries.
-		var movies = $.ui.odataDatasource({
+		var movies = $.ui.odataDataview({
 			resource: "http://odata.netflix.com/Catalog/Titles"
 		});
 		$( "#movies" ).grid({
-			source: movies
+			source: movies.result
 		});
 
 		$( "#filterMovies" ).filterControl( movies );
@@ -121,17 +125,17 @@
 	.tool button.active {
 		border: 1px solid black;
 	}
-	.sort-asc:before {
-		content: "/\\"
+	.sort-asc:after {
+		content: " ↑"
 	}
-	.sort-desc:before {
-		content: "\\/"
+	.sort-desc:after {
+		content: " ↓"
 	}
 	</style>
 </head>
 <body>
 
-<h1>Grids with local and remote datasource</h1>
+<h1>Grids with local and remote dataview</h1>
 <p>features: sorting, filtering, paging</p>
 
 <h2>local data source</h2>
@@ -160,18 +164,19 @@
 	<button data-page="next">Next</button>
 	<button data-page="last">Last</button>
 </p>
+<div style="width:48em;">
 <table id="developers-local">
 	<thead>
 		<tr>
-			<th data-field="firstName">First Name</th>
-			<th data-field="lastName">Last Name</th>
-			<th data-field="country">Country</th>
+			<th data-property="firstName">First Name</th>
+			<th data-property="lastName">Last Name</th>
+			<th data-property="country">Country</th>
 		</tr>
 	</thead>
 	<tbody>
 	</tbody>
 </table>
-
+</div>
 
 <h2>remote data source</h2>
 <p id="filterMovies">
@@ -198,17 +203,25 @@
 	<button data-page="next">Next</button>
 	<button data-page="last">Last</button>
 </p>
+
+<div style="width:80%">
 <table id="movies">
+	<colgroup>
+		<col width="60%">
+		<col width="20%">
+		<col width="20%">
+	</colgroup>
 	<thead>
 		<tr>
-			<th data-field="Name">Name</th>
-			<th data-field="ReleaseYear">Release Year</th>
-			<th data-field="AverageRating">Average Rating</th>
+			<th data-property="Name">Name</th>
+			<th data-property="ReleaseYear">Release Year</th>
+			<th data-property="AverageRating">Average Rating</th>
 		</tr>
 	</thead>
 	<tbody>
 	</tbody>
 </table>
+</div>
 
 </body>
 </html>

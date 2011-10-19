@@ -9,14 +9,13 @@ $.widget( "spf.slideshow", {
 	_create: function() {
 		this.element.addClass( "spf-slideshow" );
 		this._bind( this.options.source, {
-			datasourceresponse: "refresh"
+			dataviewresponse: "refresh"
 		});
+		$.template('photo-tmpl', '<a href="${href}" title="${title}"><img src="${src}" alt="${alt}" /></a>');
 	},
 
 	refresh: function() {
-		this.element.html( $.map( this.options.source.toArray(), function( photo ) {
-			return kite( "#photo-tmpl", photo );
-		}).join( "" ) );
+		this.element.html( $.tmpl( 'photo-tmpl', this.options.source.result ) );
 	}
 });
 

@@ -6,11 +6,12 @@
 	<title>Grid: Editing, Todo app</title>
 	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
 	<link rel="stylesheet" href="../demos/demos.css">
-	<script src="../jquery-1.5.1.js"></script>
+	<script src="../jquery-1.6.2.js"></script>
 	<script src="../external/jquery.tmpl.js"></script>
 	<script src="../ui/jquery.ui.core.js"></script>
 	<script src="../ui/jquery.ui.widget.js"></script>
 	<script src="../ui/jquery.ui.button.js"></script>
+	<script src="../ui/jquery.ui.observable.js"></script>
 	<script src="localstore.js"></script>
 	<script>
 
@@ -20,19 +21,23 @@
 			initial: []
 		});
 		var todos = store.load();
-		var ids = todos.length;
 
 		$( ":submit" ).button();
 
-		function save() {
-			store.save( todos );
-			$(store).trigger( "update" );
-			return this;
+		// TODO rewrite to do incremental rendering on each todo item
+		$.observable( todos ).bind("insert remove replaceAll", function() {
+			store.save();
+			renderList();
+		});
+		function renderList() {
+			updateAllChecked();
+			$( "#remaining" ).text( todos.length + (todos.length === 1 ? " item" : " items") + " remaining" );
+			list.empty().append( $( "#todo-list-item" ).tmpl( todos ) );
 		}
 		function update( index, checked ) {
 			todos[ index ].done = checked;
 			updateAllChecked();
-			store.save( todos );
+			store.save();
 		}
 		function updateAllChecked() {
 			var allChecked = todos.length && $.grep( todos, function( item, index ) {
@@ -47,12 +52,11 @@
 			if ( !input.val() ) {
 				return;
 			}
-			todos.push( {
-				id: ids++,
+			$.observable( todos ).insert({
+				id: todos.length + 1,
 				title: input.val()
 			});
 			input.val( "" );
-			save();
 		});
 
 		var list = $( "#todos-list" ).delegate( "input", "click", function( event ) {
@@ -68,7 +72,7 @@
 				$.each( todos, function( index, todo ) {
 					todo.done = check;
 				});
-				save();
+				$.observable(todos).replaceAll(todos);
 			}, 1);
 		});
 		$( "#clearCompleted" ).click( function() {
@@ -77,13 +81,9 @@
 					todos.splice( i, 1 );
 				}
 			}
-			save();
+			$.observable(todos).replaceAll(todos);
 		});
-		$(store).bind( "update", function() {
-			updateAllChecked();
-			$( "#remaining" ).text( todos.length + (todos.length === 1 ? " item" : " items") + " remaining" );
-			list.empty().append( $( "#todo-list-item" ).tmpl( todos ) );
-		}).trigger( "update" );
+		renderList();
 	});
 	</script>
 	<style>
@@ -94,7 +94,6 @@
 			font-size: 1.5em; padding: 0.5em; border: 1px solid #999; box-shadow: 0 0 6px rgba(0,0,0,0.5);
 			display: block; width: 100%; box-sizing: border-box; -ms-box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box;
 		}
-		#addMovie { right: 1em; position: absolute; font-size: 0.6em; }
 		#overview { position: relative; padding: 1.2em; background: #eee; border: 1px solid #999; border-left: none; border-right: none; }
 		#clearCompleted { position: absolute; right: 1em; top: 0.5em; }
 		#markDone { padding: 0.5em; }

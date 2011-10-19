@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Photo Slideshow</title>
+	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
+	<link rel="stylesheet" href="../demos/demos.css">
+	<script src="../jquery-1.6.2.js"></script>
+	<script src="../external/jquery.tmpl.js"></script>
+	<script src="../ui/jquery.ui.core.js"></script>
+	<script src="../ui/jquery.ui.widget.js"></script>
+	<script src="../ui/jquery.ui.position.js"></script>
+	<script src="../ui/jquery.ui.button.js"></script>
+	<script src="../ui/jquery.ui.observable.js"></script>
+	<script src="../ui/jquery.ui.dataview.js"></script>
+	<script src="dataview-nested.js"></script>
+	<script src="slideshow-dataview.js"></script>
+	<script src="slideshow.js"></script>
+	<script src="pager.js"></script>
+	<script>
+	$(function() {
+		var remote = $.ui.flickrDataview({
+			paging: {
+				limit: 10
+			},
+			response: function() {
+				// preload the actual images
+				$.each(this.result, function(index, photo) {
+					new Image().src = photo.src;
+				});
+			}
+		});
+
+		var dataview = $.ui.nestedDataview({
+			paging: {
+				limit: 2
+			},
+			remote: remote
+		});
+
+		$( "#slideshow" ).slideshow({
+			source: dataview
+		});
+
+		$( ".controls" ).pager({
+			source: dataview
+		});
+
+		$( "#page-size" ).change( function() {
+			dataview.option( "paging.limit", +$( this ).val() ).refresh();
+		});
+
+		$( "#filter" ).change(function() {
+			dataview.option( "filter", $( this ).val() ).refresh();
+		}).trigger( "change" );
+	});
+	</script>
+</head>
+<body>
+
+<h1>Photo Slideshow Remote Preloaded</h1>
+<p>features: paging, filtering, remote dataview, preloading</p>
+
+<hr>
+
+<p>
+	Per page: <input id="page-size" value="2">
+</p>
+<p>
+	Tags to look for (comma seperated): <input id="filter" value="jquery">
+</p>
+
+<div class="controls">
+	<button data-page="first">First</button>
+	<button data-page="prev">Prev</button>
+	<span>
+		Page <input class="current" size="4"/>/<span class="total">0</span>,
+		Total records <span class="totalRecords">0</span>
+	</span>
+	<button data-page="next">Next</button>
+	<button data-page="last">Last</button>
+</div>
+
+<div id="slideshow"></div>
+
+</body>
+</html>
