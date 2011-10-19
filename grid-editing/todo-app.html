@@ -24,10 +24,52 @@
 
 		$( ":submit" ).button();
 
+		// TODO Move this dynamic bind/unbind into a data-binder helper component.
+		function bindChange( items ) {
+			var that = this;
+			$.each( items, function( index, item ) {
+				// TODO make namespace specific for this instance
+				$.observable( item ).bind( "change.todo", function() {
+					deferredSaveAndRender();
+				});
+			});
+		};
+
+		// TODO Move this dynamic bind/unbind into a data-binder helper component.
+		function unbindChange( items ) {
+			$.each( items, function( index, item ) {
+				// TODO see above
+				$.observable( item ).unbind( "change.todo" );
+			});
+		};
+
+		var queuedSaveAndRender;
+		function deferredSaveAndRender() {
+			// Allow for multiple observable edits to accumulate before store.save()
+			// Defer "renderList" until multiple model edits have completed.
+			if (!queuedSaveAndRender) {
+				queuedSaveAndRender = true;
+				setTimeout(function() {
+					queuedSaveAndRender = false;
+					store.save();  // TODO This "debouncing" could be moved into store.save() as well.
+					renderList();
+				}, 0);
+			}
+		};
+
 		// TODO rewrite to do incremental rendering on each todo item
-		$.observable( todos ).bind("insert remove replaceAll", function() {
-			store.save();
-			renderList();
+		$.observable( todos ).bind("insert remove replaceAll", function( event, ui ) {
+			// TODO Move this dynamic bind/unbind into a data-binder helper component.
+			if ( event.type === "insert" ) {
+				bindChange( ui.items );
+			} else if (event.type === "replaceAll" ) {
+				unbindChange( ui.oldItems );
+				bindChange( ui.newItems );
+			} else {
+				unbindChange( ui.items );
+			}
+
+		        deferredSaveAndRender();
 		});
 		function renderList() {
 			updateAllChecked();
@@ -35,7 +77,7 @@
 			list.empty().append( $( "#todo-list-item" ).tmpl( todos ) );
 		}
 		function update( index, checked ) {
-			todos[ index ].done = checked;
+			$.observable(todos[ index ]).property("done", checked);
 			updateAllChecked();
 			store.save();
 		}
@@ -70,9 +112,8 @@
 			setTimeout(function() {
 				var check = checkbox.is( ":checked" );
 				$.each( todos, function( index, todo ) {
-					todo.done = check;
+					$.observable(todo).property("done", check);
 				});
-				$.observable(todos).replaceAll(todos);
 			}, 1);
 		});
 		$( "#clearCompleted" ).click( function() {
