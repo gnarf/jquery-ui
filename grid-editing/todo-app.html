@@ -43,19 +43,45 @@
 			});
 		};
 
-		var queuedSaveAndRender;
-		function deferredSaveAndRender() {
-			// Allow for multiple observable edits to accumulate before store.save()
-			// Defer "renderList" until multiple model edits have completed.
-			if (!queuedSaveAndRender) {
-				queuedSaveAndRender = true;
-				setTimeout(function() {
-					queuedSaveAndRender = false;
-					store.save();  // TODO This "debouncing" could be moved into store.save() as well.
-					renderList();
+		// TODO I am imagining something like this on $.observable:
+		// The idea being we only want to use one setTimeout, and just call a bucket of functions
+		// also - there are some benifits to using $.Callbacks in 1.7 instead of $.Deferred
+		// but we can tackle those after 1.7 is released :) - Corey
+		var changeDeferred;
+		function afterChanges( fn ) {
+			if ( !changeDeferred ) {
+
+				// create a new deferred, and attach it to resolve on the "next tick"
+				changeDeferred = $.Deferred();
+				setTimeout(function(){
+					changeDeferred.resolve();
+					changeDeferred = false;
 				}, 0);
 			}
-		};
+
+			// add the passed function to the callbacks bucket
+			changeDeferred.done( fn );
+		}
+
+		function saveAndRender() {
+			store.save();
+			renderList();
+		}
+
+		// TODO once we upgrade to using $.Callbacks("unique once memory") instead of $.Deferred,
+		// we don't need to do this "did i already add this function" check, the unique flag
+		// on the $.Callbacks would let us just afterChanges( saveAndRender ) and only one copy
+		// of saveAndRender is ever allowed on the callback bucket
+		var queuedSaveAndRender;
+		function deferredSaveAndRender() {
+			if (!queuedSaveAndRender) {
+				afterChanges(function() {
+					saveAndRender();
+					queuedSaveAndRender = false;
+				});
+				queuedSaveAndRender = true;
+			}
+		}
 
 		// TODO rewrite to do incremental rendering on each todo item
 		$.observable( todos ).bind("insert remove replaceAll", function( event, ui ) {
@@ -68,9 +94,9 @@
 			} else {
 				unbindChange( ui.items );
 			}
-
-		        deferredSaveAndRender();
+			deferredSaveAndRender();
 		});
+
 		function renderList() {
 			updateAllChecked();
 			$( "#remaining" ).text( todos.length + (todos.length === 1 ? " item" : " items") + " remaining" );
