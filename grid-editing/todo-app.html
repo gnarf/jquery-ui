@@ -71,6 +71,8 @@
 
 		        deferredSaveAndRender();
 		});
+		bindChange(todos);
+
 		function renderList() {
 			updateAllChecked();
 			$( "#remaining" ).text( todos.length + (todos.length === 1 ? " item" : " items") + " remaining" );
