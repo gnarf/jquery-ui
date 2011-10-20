@@ -6,7 +6,7 @@
 	<title>Grid: Editing, Todo app</title>
 	<link rel="stylesheet" href="../themes/base/jquery.ui.all.css">
 	<link rel="stylesheet" href="../demos/demos.css">
-	<script src="../jquery-1.6.2.js"></script>
+	<script src="http://code.jquery.com/jquery-git.js"></script>
 	<script src="../external/jquery.tmpl.js"></script>
 	<script src="../ui/jquery.ui.core.js"></script>
 	<script src="../ui/jquery.ui.widget.js"></script>
@@ -20,9 +20,17 @@
 			key: "grid-editing-todos",
 			initial: []
 		});
-		var todos = store.load();
+		var todos = store.load(),
+			itemsChanged = 0;
 
 		$( ":submit" ).button();
+
+		function saveAndRender() {
+			$("#counter").text( itemsChanged );
+			itemsChanged = 0;
+			store.save();
+			renderList();
+		}
 
 		// TODO Move this dynamic bind/unbind into a data-binder helper component.
 		function bindChange( items ) {
@@ -30,7 +38,8 @@
 			$.each( items, function( index, item ) {
 				// TODO make namespace specific for this instance
 				$.observable( item ).bind( "change.todo", function() {
-					deferredSaveAndRender();
+					itemsChanged++;
+					afterChange( saveAndRender );
 				});
 			});
 		};
@@ -43,44 +52,21 @@
 			});
 		};
 
-		// TODO I am imagining something like this on $.observable:
-		// The idea being we only want to use one setTimeout, and just call a bucket of functions
-		// also - there are some benifits to using $.Callbacks in 1.7 instead of $.Deferred
-		// but we can tackle those after 1.7 is released :) - Corey
-		var changeDeferred;
-		function afterChanges( fn ) {
-			if ( !changeDeferred ) {
+		// TODO I am imagining this as $.observable.afterChange or something similar:
+		var afterChangeCallbacks;
+		function afterChange( fn ) {
+			if ( !afterChangeCallbacks ) {
 
-				// create a new deferred, and attach it to resolve on the "next tick"
-				changeDeferred = $.Deferred();
+				// if we use the unique flag, only one instance of each function is allowed
+				afterChangeCallbacks = $.Callbacks( "once memory unique");
 				setTimeout(function(){
-					changeDeferred.resolve();
-					changeDeferred = false;
+					afterChangeCallbacks.fire();
+					afterChangeCallbacks = false;
 				}, 0);
 			}
 
 			// add the passed function to the callbacks bucket
-			changeDeferred.done( fn );
-		}
-
-		function saveAndRender() {
-			store.save();
-			renderList();
-		}
-
-		// TODO once we upgrade to using $.Callbacks("unique once memory") instead of $.Deferred,
-		// we don't need to do this "did i already add this function" check, the unique flag
-		// on the $.Callbacks would let us just afterChanges( saveAndRender ) and only one copy
-		// of saveAndRender is ever allowed on the callback bucket
-		var queuedSaveAndRender;
-		function deferredSaveAndRender() {
-			if (!queuedSaveAndRender) {
-				afterChanges(function() {
-					saveAndRender();
-					queuedSaveAndRender = false;
-				});
-				queuedSaveAndRender = true;
-			}
+			afterChangeCallbacks.add( fn );
 		}
 
 		// TODO rewrite to do incremental rendering on each todo item
@@ -94,8 +80,9 @@
 			} else {
 				unbindChange( ui.items );
 			}
-			deferredSaveAndRender();
+			afterChange( saveAndRender );
 		});
+		bindChange(todos);
 
 		function renderList() {
 			updateAllChecked();
@@ -192,7 +179,9 @@
 		<ul id="todos-list">
 		</ul>
 	</div>
-
+	<div class="debug">
+		Items Changed Count: <span id="counter">0</span>
+	</div>
 </div>
 
 <script id="todo-list-item" type="text/x-jquery-tmpl">
