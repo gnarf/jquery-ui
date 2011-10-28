@@ -117,11 +117,13 @@
 		<mkdir dir="${min.dir}/i18n/" />
 		<mkdir dir="${dist.dir}/themes/base/minified" />
 		<parallel threadsperprocessor="1">
-			<apply executable="build/minify-js.sh">
+			<apply executable="node">
+				<arg line="build/uglify.js" />
 				<fileset dir="${dist.dir}/ui" includes="**.js" />
 				<srcfile />
-				<mapper type="glob" from="*.js" to="${min.dir}/*.min.js" />
-				<targetfile/>
+				<redirector>
+					<outputmapper id="out" type="glob" from="*.js" to="${min.dir}/*.min.js" />
+				</redirector>
 			</apply>
 			<apply executable="java" parallel="false">
 				<fileset dir="${dist.dir}/themes/base" includes="*.css" />
