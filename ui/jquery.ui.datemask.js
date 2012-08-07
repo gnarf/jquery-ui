@@ -92,40 +92,20 @@ $.widget( "ui.datemask", {
 		var bufferIndex, bufferObject,
 			buffer = this.mask.buffer,
 			bufferLength = buffer.length,
-			maskDefinitions = this.mask.options.definitions,
-			ampm = this._getCulture();
+			maskDefinitions = this.mask.options.definitions;
 
 		if ( value == null ) {
-
-			// storing the hours as a number until the very end
-			value = [ 0, "00", "00" ];
-			for ( bufferIndex = 0; bufferIndex < bufferLength; bufferIndex += 3 ) {
+			value = [ 0, 0, 0 ];
+			for ( bufferIndex = 0; bufferIndex < 9; bufferIndex += 3 ) {
 				bufferObject = buffer[ bufferIndex ];
-				if (
-					bufferObject.valid === maskDefinitions._h || bufferObject.valid === maskDefinitions.hh ||
-					bufferObject.valid === maskDefinitions._H || bufferObject.valid === maskDefinitions.HH
-				) {
-					value[ 0 ] = parseInt( bufferObject.value, 10 );
-				} else if ( bufferObject.valid === maskDefinitions.mm ) {
-					value[ 1 ] = bufferObject.value;
-				} else if ( bufferObject.valid === maskDefinitions.ss ) {
-					value[ 2 ] = bufferObject.value;
-				} else if ( bufferObject.valid === maskDefinitions.tt ) {
-					value[ 0 ] %= 12;
-					if ( jQuery.inArray( bufferObject.value, ampm.PM ) > -1 ) {
-						value[ 0 ] += 12;
-					}
-				}
+				value[ bufferIndex / 3 ] = bufferObject.valid( bufferObject.value ) || 0;
 			}
-
-			// pads with zeros
-			value[ 0 ] = maskDefinitions.HH( "" + value[ 0 ] );
-			return value.join( ":" );
+			return value.join( "/" ).replace( / /g, "0" );
 		} else {
 
 			// setter for values
-			value = value.split( ":" );
-			for ( bufferIndex = 0; bufferIndex < bufferLength; bufferIndex += 3 ) {
+			value = value.split( "/" );
+			for ( bufferIndex = 0; bufferIndex < 9; bufferIndex += 3 ) {
 				bufferObject = buffer[ bufferIndex ];
 				// minutes/seconds
 				bufferObject.value = bufferObject.valid( value[ bufferIndex / 3 ] );
